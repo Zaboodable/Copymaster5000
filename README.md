@@ -1,4 +1,4 @@
-<img src="/img/icon.ico"> 
+<img src="/icon.ico"> 
 <h1>Copy Master 5000</h1>
 An all in one solution for your service desk needs.
 <h2>Installation Instructions</h2>
