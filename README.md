@@ -11,5 +11,3 @@ An all in one solution for your service desk needs.
 <li>(Optional) Set shortcut icon: Right click -> Properties -> Change Icon -> Navigate to copymaster folder and select "img\icon.ico"</li>
 </ol>
 <b>You will need the data files, these are not stored on the repository. Copy them into the same folder as copymaster.ps1<b>
-
-https://github.com/Zaboodable/Copymaster5000_data
