@@ -2,7 +2,9 @@ Add-Type -AssemblyName PresentationFramework
 [System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions")
 
 [System.Collections.Hashtable] $Global:strings = [System.Collections.Hashtable]::new()
+[System.Collections.Hashtable] $Global:systems = [System.Collections.Hashtable]::new()
 $Global:strings_path = "$PWD\strings.json"
+$Global:systems_path = "$PWD\systems.json"
 $icon_path = "$PWD\icon.ico"
 
 
@@ -57,12 +59,31 @@ function LoadStrings
         LoadStrings        
     }
 }
+function LoadSystems
+{
+    # Ensure system file exists.
+    # Create if not
+    $exists = Test-Path $Global:systems_path
+    if ($exists)
+    {
+         $Global:systems = Parse-JsonFile $Global:systems_path
+        
+    }
+    else
+    {
+        # Create blank json file if one does not exist
+        $file = New-Item $Global:systems_path
+        Write-Output '{' '' '}' >> $file
+        LoadStrings        
+    }
+}
 
 function AddJsonString([string]$identifier, [string]$title,[string]$content,[string]$category,[bool]$favourite)
 {
     $data = @($title, $content, $category, $favourite)
     $Global:strings[$identifier] = $data
 }
+
 #region UTIL
 Function HSLtoRGB ($H,$S,$L) {
     $H = [double]($H / 360)
@@ -119,6 +140,7 @@ function HSLtoHEX($values)
 {   
     return RGBtoHEX(HSLtoRGB $values[0] $values[1] $values[2])
 }
+
 #endregion UTIL
 #endregion Functions
 
@@ -135,6 +157,7 @@ $main_dock.Background = "#dddddd"
 
 ### LOAD DATA ###
 LoadStrings
+LoadSystems
 
 ### CREATE TABS ###
 $main_tabs = [System.Windows.Controls.TabControl]::new()
@@ -145,13 +168,18 @@ $main_tabs = [System.Windows.Controls.TabControl]::new()
 [double]$sat = 50
 [double]$lum= 75
 
+$Global:color_maintab_header = "#ffffc0"
+$Global:color_systemtab_header = "#c0ffff"
+$Global:color_maintab = "#ffffe0"
+$Global:color_systemtab= "#e0ffff"
+
 ## QUICK COPY TABS [strings.json]##
 foreach ($0_key in $Global:strings.Keys)
 {
     # Create and configure new tab item
     $0_tabitem = [System.Windows.Controls.TabItem]::new()
     $0_tabitem.Header = $0_key.ToString()
-    $0_tabitem.Background ="#ffeeee"
+    $0_tabitem.Background =$Global:color_maintab_header
     # add tab to panel
     $main_tabs.AddChild($0_tabitem)
 
@@ -160,7 +188,7 @@ foreach ($0_key in $Global:strings.Keys)
 
     # Dock panel for tab content parent
     $1_dockpanel = [System.Windows.Controls.DockPanel]::new()
-    $1_dockpanel.Background = "#e0e0ff"
+    $1_dockpanel.Background = $Global:color_maintab
 
     # ScrollViewer to allow scrolling when content extends beyond window
     $1_scrollviewer = [System.Windows.Controls.ScrollViewer]::new()
@@ -213,9 +241,82 @@ foreach ($0_key in $Global:strings.Keys)
         $1_scrollviewer_contentpanel.AddChild($1_border)
 
     }
-    # Dont forget to add the dockpanel to the window!
+    # Dont forget to add the dockpanel to the tab!
     $0_tabitem.AddChild($1_dockpanel)
 
+}
+
+$tab_main_systems = [System.Windows.Controls.TabItem]::new()
+$tab_main_systems.Header="Systems"
+$tab_main_systems.Background = $Global:color_maintab_header
+$tab_systems = [System.Windows.Controls.TabControl]::new()
+$dockpanel_systems = [System.Windows.Controls.DockPanel]::new()
+$dockpanel_systems.AddChild($tab_systems)
+$tab_main_systems.AddChild($dockpanel_systems)
+$main_tabs.AddChild($tab_main_systems)
+foreach ($0_key in $Global:systems.Keys)
+{
+    # Create and configure new tab item
+    $0_tabitem = [System.Windows.Controls.TabItem]::new()
+    $0_tabitem.Header = $0_key.ToString()
+    $0_tabitem.Background =$Global:color_systemtab_header
+    # add tab to panel
+    $tab_systems.AddChild($0_tabitem)
+
+    ## dictionary of content from the json data
+    $1_dictionary = $Global:strings[$0_key]
+
+    # Dock panel for tab content parent
+    $1_dockpanel = [System.Windows.Controls.DockPanel]::new()
+    $1_dockpanel.Background = $Global:color_systemtab
+
+    # ScrollViewer to allow scrolling when content extends beyond window
+    $1_scrollviewer = [System.Windows.Controls.ScrollViewer]::new()
+    $1_scrollviewer.HorizontalAlignment="Stretch"
+    $1_scrollviewer.VerticalAlignment="Stretch"
+    $1_scrollviewer_contentpanel = [System.Windows.Controls.DockPanel]::new()
+    $1_scrollviewer.AddChild($1_scrollviewer_contentpanel)
+    ## System Data ##
+    $system_data = $Global:systems[$0_key]
+    $data_owner = $system_data["Owner"]
+    $data_team = $system_data["Primary Team"]
+    $data_backupteam = $system_data["Other Team"]    
+
+    $label_owner = [System.Windows.Controls.Label]::new()
+    $label_team = [System.Windows.Controls.Label]::new()    
+    $label_backupteam = [System.Windows.Controls.Label]::new()
+    $label_owner.Content = [string]::Format("Product Owner: {0}", $data_owner)
+    $label_team.Content = [string]::Format("Team: {0}", $data_team)
+    $label_backupteam.Content = [string]::Format("Other Team: {0}", $data_backupteam)
+    
+    $header_stack = [System.Windows.Controls.StackPanel]::new()
+    $header_border = [System.Windows.Controls.Border]::new()
+    $header_border.CornerRadius = 2
+    $header_border.BorderBrush = "#708090"
+    $header_border.BorderThickness = 2
+    $header_border.Margin = "1 1 1 1"         #margin left top right bottom
+    $header_border.AddChild($header_stack)
+    $header_border.Height = 80
+
+    $content_border = [System.Windows.Controls.Border]::new()
+    $content_border.CornerRadius = 2
+    $content_border.BorderBrush = "#708090"
+    $content_border.BorderThickness = 2
+    $content_border.Margin = "1 1 1 1"         #margin left top right bottom
+    $content_border.AddChild($1_scrollviewer)
+
+    $header_stack.AddChild($label_owner)
+    $header_stack.AddChild($label_team)
+    $header_stack.AddChild($label_backupteam)
+    $1_dockpanel.AddChild($header_border)
+    $1_dockpanel.AddChild($content_border)
+
+    
+    [System.Windows.Controls.DockPanel]::SetDock($header_border, [System.Windows.Controls.Dock]::Top)
+    [System.Windows.Controls.DockPanel]::SetDock($content_border, [System.Windows.Controls.Dock]::Bottom)
+
+    # Dont forget to add the dockpanel to the tab!
+    $0_tabitem.AddChild($1_dockpanel)
 }
 
 
