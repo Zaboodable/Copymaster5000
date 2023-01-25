@@ -3,7 +3,7 @@
 An all in one solution for your service desk needs.
 <h2>Installation Instructions</h2>
 <ol>
-<li>Download files from repository to a folder</li>
+<li>Download files from repository to a folder -> (Code - Download ZIP) -> extract the folder somewhere</li>
 <li>You may need to copy the content of <b>copymaster.ps1</b> into a new text file and save it as a new .ps1 file. (Downloaded one might not work due to execution policies)</li>
 <li>Right click your new .ps1 file -> Send to -> Desktop (create shortcut)</li>
 <li>Edit the new desktop shortcut by right clicking -> Properties -> <br><b>Target: </b>powershell.exe -NoP -W Hidden "Path\To\Copymaster\copymaster.ps1"<br><b>Start in:</b> Path\To\Copymaster</li>
