@@ -63,6 +63,63 @@ function AddJsonString([string]$identifier, [string]$title,[string]$content,[str
     $data = @($title, $content, $category, $favourite)
     $Global:strings[$identifier] = $data
 }
+#region UTIL
+Function HSLtoRGB ($H,$S,$L) {
+    $H = [double]($H / 360)
+    $S = [double]($S / 100)
+    $L = [double]($L / 100)
+
+     if ($s -eq 0) {
+        $r = $g = $b = $l
+     }
+    else {
+        if ($l -lt 0.5){
+           $q = $l * (1 + $s) 
+        } 
+        else {
+          $q =  $l + $s - $l * $s
+        }
+        $p = (2 * $L) - $q
+        $r = (Hue2rgb $p $q ($h + 1/3))
+        $g = (Hue2rgb $p $q $h )
+        $b = (Hue2rgb $p $q ($h - 1/3))
+    }
+
+    $r = [Math]::Round($r * 255)
+    $g = [Math]::Round($g * 255)
+    $b = [Math]::Round($b * 255)
+
+    return ($r,$g,$b)
+}
+
+
+function Hue2rgb ($p, $q, $t) {
+    if ($t -lt 0) { $t++ }
+    if ($t -gt 1) { $t-- }
+    if ($t -lt 1/6) { return ( $p + ($q - $p) * 6 * $t ) }
+    if ($t -lt 1/2) { return $q }    
+    if ($t -lt 2/3) { return ($p + ($q - $p) * (2/3 - $t) * 6 ) }
+    return $p
+}
+
+function RGBtoHEX($col)
+{
+    $r = $col[0]
+    $g = $col[1]
+    $b = $col[2]
+    
+    if ($r -lt 0 -or $r -gt 255) { $r = 0 }
+    if ($g -lt 0 -or $g -gt 255) { $g = 0 }
+    if ($b -lt 0 -or $b -gt 255) { $b = 0 }
+
+    return [string]::Format("#{0:X2}{1:X2}{2:X2}", [int]$r, [int]$g, [int]$b)
+}
+
+function HSLtoHEX($values)
+{   
+    return RGBtoHEX(HSLtoRGB $values[0] $values[1] $values[2])
+}
+#endregion UTIL
 #endregion Functions
 
 
@@ -81,6 +138,12 @@ LoadStrings
 
 ### CREATE TABS ###
 $main_tabs = [System.Windows.Controls.TabControl]::new()
+
+## COLOURS ##
+[double]$hue = Get-Random -Minimum 0 -Maximum 360
+[double]$hue_step = 4
+[double]$sat = 50
+[double]$lum= 75
 
 ## QUICK COPY TABS [strings.json]##
 foreach ($0_key in $Global:strings.Keys)
@@ -117,6 +180,10 @@ foreach ($0_key in $Global:strings.Keys)
         $1_border.BorderBrush = "Black"
         $1_border.BorderThickness = 2
         $1_border.Margin = "4 1 4 0"         #margin left top right bottom
+        $c = HSLtoRGB $hue $sat $lum
+        $hue += $hue_step
+        $hc = RGBtoHEX $c
+        $1_border.Background = $hc
 
         # Data for the button
         # Title is shown on the button as a quick reference
