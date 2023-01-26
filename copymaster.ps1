@@ -4,12 +4,8 @@ Add-Type -AssemblyName PresentationFramework
 #### TODO ####
 # Merge all json into a single file
 #### TODO ####
-[System.Collections.Hashtable] $Global:strings = [System.Collections.Hashtable]::new()
-[System.Collections.Hashtable] $Global:systems = [System.Collections.Hashtable]::new()
-[System.Collections.Hashtable] $Global:tips = [System.Collections.Hashtable]::new()
-$Global:strings_path = "$PWD\strings.json"
-$Global:systems_path = "$PWD\systems.json"
-$Global:tips_path = "$PWD\tips.json"
+[System.Collections.Hashtable] $Global:data = [System.Collections.Hashtable]::new()
+$Global:data_path = "$PWD\data.json"
 $icon_path = "$PWD\icon.ico"
 
 
@@ -50,68 +46,25 @@ function Parse-JsonFile([string]$file) {
 #### TODO ####
 # Merge all json into a single file
 #### TODO ####
-function LoadStrings
+function LoadData
 {
     # Ensure strings file exists.
     # Create if not
-    $exists = Test-Path $Global:strings_path
+    $exists = Test-Path $Global:data_path
     if ($exists)
     {
-         $Global:strings = Parse-JsonFile $Global:strings_path
+         $Global:data = Parse-JsonFile $Global:data_path
         
     }
     else
     {
         # Create blank json file if one does not exist
-        $file = New-Item $Global:strings_path
+        $file = New-Item $Global:data_path
         Write-Output '{' '' '}' >> $file
         LoadStrings        
     }
 }
 
-#### TODO ####
-# Merge all json into a single file
-#### TODO ####
-function LoadSystems
-{
-    # Ensure system file exists.
-    # Create if not
-    $exists = Test-Path $Global:systems_path
-    if ($exists)
-    {
-         $Global:systems = Parse-JsonFile $Global:systems_path
-        
-    }
-    else
-    {
-        # Create blank json file if one does not exist
-        $file = New-Item $Global:systems_path
-        Write-Output '{' '' '}' >> $file
-        LoadStrings        
-    }
-}
-
-#### TODO ####
-# Merge all json into a single file
-#### TODO ####
-function LoadSystems
-{
-    # Ensure system file exists.
-    # Create if not
-    $exists = Test-Path $Global:tips_path
-    if ($exists)
-    {
-         $Global:tips = Parse-JsonFile $Global:tips_path
-        
-    }
-    else
-    {
-        # Create blank json file if one does not exist
-        $file = New-Item $Global:tips_path
-        Write-Output '{' '' '}' >> $file
-        LoadStrings        
-    }
-}
 
 function AddJsonString([string]$identifier, [string]$title,[string]$content,[string]$category,[bool]$favourite)
 {
@@ -186,13 +139,15 @@ $window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterSc
 $window.Width = 800
 $window.Height = 512
 $window.Icon = $icon_path
+$window.Add_LostKeyboardFocus({
+    $main_header.Content=""
+})
 
 $main_dock = [System.Windows.Controls.DockPanel]::new()
 $main_dock.Background = "#dddddd"
 
 ### LOAD DATA ###
-LoadStrings
-LoadSystems
+LoadData
 
 ### CREATE TABS ###
 $main_tabs = [System.Windows.Controls.TabControl]::new()
@@ -212,6 +167,7 @@ $Global:color_systemtab_sub = "#ffe0ff"
 
 ## QUICK COPY TABS [strings.json]##
 #region Strings
+$Global:strings = $Global:data["Strings"]
 foreach ($0_key in $Global:strings.Keys)
 {
     # Create and configure new tab item
@@ -298,6 +254,7 @@ $main_tabs.AddChild($tab_main_systems)
 
 ## For each system in the json file
 ## Create multiple sub-tabs as defined in the file for misc info related to that system
+$Global:systems = $Global:data["Systems"]
 foreach ($0_key in $Global:systems.Keys)
 {
     # Create and configure new tab item
@@ -396,6 +353,7 @@ $main_tabs.AddChild($tab_tips)
 
 ## For each system in the json file
 ## Create multiple sub-tabs as defined in the file for misc info related to that system
+$Global:tips = $Global:data["Tips"]
 foreach ($0_key in $Global:tips.Keys)
 {
     # Create and configure new tab item
