@@ -1,10 +1,15 @@
 Add-Type -AssemblyName PresentationFramework
 [System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions")
 
+#### TODO ####
+# Merge all json into a single file
+#### TODO ####
 [System.Collections.Hashtable] $Global:strings = [System.Collections.Hashtable]::new()
 [System.Collections.Hashtable] $Global:systems = [System.Collections.Hashtable]::new()
+[System.Collections.Hashtable] $Global:tips = [System.Collections.Hashtable]::new()
 $Global:strings_path = "$PWD\strings.json"
 $Global:systems_path = "$PWD\systems.json"
+$Global:tips_path = "$PWD\tips.json"
 $icon_path = "$PWD\icon.ico"
 
 
@@ -41,6 +46,10 @@ function Parse-JsonFile([string]$file) {
     $parser.MaxJsonLength = $text.length
     Write-Output -NoEnumerate $parser.DeserializeObject($text)
 }
+
+#### TODO ####
+# Merge all json into a single file
+#### TODO ####
 function LoadStrings
 {
     # Ensure strings file exists.
@@ -59,6 +68,10 @@ function LoadStrings
         LoadStrings        
     }
 }
+
+#### TODO ####
+# Merge all json into a single file
+#### TODO ####
 function LoadSystems
 {
     # Ensure system file exists.
@@ -73,6 +86,28 @@ function LoadSystems
     {
         # Create blank json file if one does not exist
         $file = New-Item $Global:systems_path
+        Write-Output '{' '' '}' >> $file
+        LoadStrings        
+    }
+}
+
+#### TODO ####
+# Merge all json into a single file
+#### TODO ####
+function LoadSystems
+{
+    # Ensure system file exists.
+    # Create if not
+    $exists = Test-Path $Global:tips_path
+    if ($exists)
+    {
+         $Global:tips = Parse-JsonFile $Global:tips_path
+        
+    }
+    else
+    {
+        # Create blank json file if one does not exist
+        $file = New-Item $Global:tips_path
         Write-Output '{' '' '}' >> $file
         LoadStrings        
     }
@@ -148,7 +183,7 @@ function HSLtoHEX($values)
 #region Interface
 $window = CreateWindow "CopyMaster 5000"
 $window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
-$window.Width = 360
+$window.Width = 800
 $window.Height = 512
 $window.Icon = $icon_path
 
@@ -170,10 +205,13 @@ $main_tabs = [System.Windows.Controls.TabControl]::new()
 
 $Global:color_maintab_header = "#ffffc0"
 $Global:color_systemtab_header = "#c0ffff"
+$Global:color_systemtab_subheader = "#ffc0ff"
 $Global:color_maintab = "#ffffe0"
 $Global:color_systemtab= "#e0ffff"
+$Global:color_systemtab_sub = "#ffe0ff"
 
 ## QUICK COPY TABS [strings.json]##
+#region Strings
 foreach ($0_key in $Global:strings.Keys)
 {
     # Create and configure new tab item
@@ -195,6 +233,7 @@ foreach ($0_key in $Global:strings.Keys)
     [System.Windows.Controls.DockPanel]::SetDock($1_scrollviewer, [System.Windows.Controls.Dock]::Left)
     $1_scrollviewer.HorizontalAlignment="Stretch"
     $1_scrollviewer.VerticalAlignment="Stretch"
+    $1_scrollviewer.HorizontalScrollBarVisibility=[System.Windows.Controls.ScrollBarVisibility]::Visible
     $1_scrollviewer_contentpanel = [System.Windows.Controls.StackPanel]::new()
     $1_scrollviewer.AddChild($1_scrollviewer_contentpanel)
     $1_dockpanel.AddChild($1_scrollviewer)
@@ -245,7 +284,9 @@ foreach ($0_key in $Global:strings.Keys)
     $0_tabitem.AddChild($1_dockpanel)
 
 }
+#endregion Strings
 
+#region Systems
 $tab_main_systems = [System.Windows.Controls.TabItem]::new()
 $tab_main_systems.Header="Systems"
 $tab_main_systems.Background = $Global:color_maintab_header
@@ -254,6 +295,9 @@ $dockpanel_systems = [System.Windows.Controls.DockPanel]::new()
 $dockpanel_systems.AddChild($tab_systems)
 $tab_main_systems.AddChild($dockpanel_systems)
 $main_tabs.AddChild($tab_main_systems)
+
+## For each system in the json file
+## Create multiple sub-tabs as defined in the file for misc info related to that system
 foreach ($0_key in $Global:systems.Keys)
 {
     # Create and configure new tab item
@@ -262,62 +306,181 @@ foreach ($0_key in $Global:systems.Keys)
     $0_tabitem.Background =$Global:color_systemtab_header
     # add tab to panel
     $tab_systems.AddChild($0_tabitem)
-
-    ## dictionary of content from the json data
-    $1_dictionary = $Global:strings[$0_key]
-
+    
     # Dock panel for tab content parent
     $1_dockpanel = [System.Windows.Controls.DockPanel]::new()
     $1_dockpanel.Background = $Global:color_systemtab
-
-    # ScrollViewer to allow scrolling when content extends beyond window
-    $1_scrollviewer = [System.Windows.Controls.ScrollViewer]::new()
-    $1_scrollviewer.HorizontalAlignment="Stretch"
-    $1_scrollviewer.VerticalAlignment="Stretch"
-    $1_scrollviewer_contentpanel = [System.Windows.Controls.DockPanel]::new()
-    $1_scrollviewer.AddChild($1_scrollviewer_contentpanel)
-    ## System Data ##
-    $system_data = $Global:systems[$0_key]
-    $data_owner = $system_data["Owner"]
-    $data_team = $system_data["Primary Team"]
-    $data_backupteam = $system_data["Other Team"]    
-
-    $label_owner = [System.Windows.Controls.Label]::new()
-    $label_team = [System.Windows.Controls.Label]::new()    
-    $label_backupteam = [System.Windows.Controls.Label]::new()
-    $label_owner.Content = [string]::Format("Product Owner: {0}", $data_owner)
-    $label_team.Content = [string]::Format("Team: {0}", $data_team)
-    $label_backupteam.Content = [string]::Format("Other Team: {0}", $data_backupteam)
-    
-    $header_stack = [System.Windows.Controls.StackPanel]::new()
-    $header_border = [System.Windows.Controls.Border]::new()
-    $header_border.CornerRadius = 2
-    $header_border.BorderBrush = "#708090"
-    $header_border.BorderThickness = 2
-    $header_border.Margin = "1 1 1 1"         #margin left top right bottom
-    $header_border.AddChild($header_stack)
-    $header_border.Height = 80
-
-    $content_border = [System.Windows.Controls.Border]::new()
-    $content_border.CornerRadius = 2
-    $content_border.BorderBrush = "#708090"
-    $content_border.BorderThickness = 2
-    $content_border.Margin = "1 1 1 1"         #margin left top right bottom
-    $content_border.AddChild($1_scrollviewer)
-
-    $header_stack.AddChild($label_owner)
-    $header_stack.AddChild($label_team)
-    $header_stack.AddChild($label_backupteam)
-    $1_dockpanel.AddChild($header_border)
-    $1_dockpanel.AddChild($content_border)
-
-    
-    [System.Windows.Controls.DockPanel]::SetDock($header_border, [System.Windows.Controls.Dock]::Top)
-    [System.Windows.Controls.DockPanel]::SetDock($content_border, [System.Windows.Controls.Dock]::Bottom)
-
-    # Dont forget to add the dockpanel to the tab!
     $0_tabitem.AddChild($1_dockpanel)
+
+    # Create tab control for system information
+    $1_tabcontrol_systeminfo = [System.Windows.Controls.TabControl]::new()
+    $1_dockpanel.AddChild($1_tabcontrol_systeminfo)
+    
+    # Get info tabs for the system    
+    $system_data = $Global:systems[$0_key]
+    ## For each info tab, create content
+    foreach ($1_key in $system_data.Keys)
+    {
+        # Create and configure new tab item
+        $2_tabitem = [System.Windows.Controls.TabItem]::new()
+        $2_tabitem.Header = $1_key.ToString()
+        $2_tabitem.Background =$Global:color_systemtab_subheader
+        # add tab to panel
+        $1_tabcontrol_systeminfo.AddChild($2_tabitem)
+
+        $2_scrollviewer = [System.Windows.Controls.ScrollViewer]::new()
+        $2_scrollviewer.HorizontalAlignment="Stretch"
+        $2_scrollviewer.VerticalAlignment="Stretch"
+        $2_scrollviewer_contentpanel = [System.Windows.Controls.StackPanel]::new()
+        $2_scrollviewer.AddChild($2_scrollviewer_contentpanel)
+        
+        $2_dockpanel = [System.Windows.Controls.DockPanel]::new()
+        $2_dockpanel.Background = $Global:color_systemtab_sub
+
+        $2_content_border = [System.Windows.Controls.Border]::new()
+        $2_content_border.CornerRadius = 2
+        $2_content_border.BorderBrush = "#708090"
+        $2_content_border.BorderThickness = 2
+        $2_content_border.Margin = "1 1 1 1"         #margin left top right bottom
+        $2_content_border.AddChild($2_scrollviewer)
+
+        $2_tabitem.AddChild($2_dockpanel)
+        $2_dockpanel.AddChild($2_content_border)
+        
+        ## Add content to the information tab
+        $system_tab_data = $system_data[$1_key]
+        for ($ci = 0; $ci -lt $system_tab_data.Length; $ci++)
+        {
+            $maincontent_object = $system_tab_data[$ci]
+            $maincontent_bold = $maincontent_object["Bold"]
+            $maincontent_content = $maincontent_object["Content"]
+            $maincontent_textbox = $maincontent_object["TextBox"]
+            if ($maincontent_textbox)
+            {
+                $maincontent_text = [System.Windows.Controls.TextBox]::new()
+                if ($maincontent_bold)
+                {
+                    $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
+                }
+                $maincontent_text.Text = $maincontent_content
+                $2_scrollviewer_contentpanel.AddChild($maincontent_text)
+            }
+            else
+            {
+                $maincontent_label = [System.Windows.Controls.Label]::new()
+                if ($maincontent_bold)
+                {
+                    $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
+                }
+                $maincontent_label.Content = $maincontent_content
+                $2_scrollviewer_contentpanel.AddChild($maincontent_label)
+            }
+
+        }
+
+    }
+
+    
 }
+#endregion Systems
+
+#region Quick Tips
+$tab_tips = [System.Windows.Controls.TabItem]::new()
+$tab_tips.Header="Useful Tips"
+$tab_tips.Background = $Global:color_maintab_header
+$tabcontrol_tips = [System.Windows.Controls.TabControl]::new()
+$dockpanel_tips = [System.Windows.Controls.DockPanel]::new()
+$dockpanel_tips.AddChild($tabcontrol_tips)
+$tab_tips.AddChild($dockpanel_tips)
+$main_tabs.AddChild($tab_tips)
+
+## For each system in the json file
+## Create multiple sub-tabs as defined in the file for misc info related to that system
+foreach ($0_key in $Global:tips.Keys)
+{
+    # Create and configure new tab item
+    $0_tabitem = [System.Windows.Controls.TabItem]::new()
+    $0_tabitem.Header = $0_key.ToString()
+    $0_tabitem.Background =$Global:color_systemtab_header
+    # add tab to panel
+    $tabcontrol_tips.AddChild($0_tabitem)
+    
+    # Dock panel for tab content parent
+    $1_dockpanel = [System.Windows.Controls.DockPanel]::new()
+    $1_dockpanel.Background = $Global:color_systemtab
+    $0_tabitem.AddChild($1_dockpanel)
+
+    # Create tab control for system information
+    $1_tabcontrol_systeminfo = [System.Windows.Controls.TabControl]::new()
+    $1_dockpanel.AddChild($1_tabcontrol_systeminfo)
+    
+    # Get info tabs for the system    
+    $system_data = $Global:tips[$0_key]
+    ## For each info tab, create content
+    foreach ($1_key in $system_data.Keys)
+    {
+        # Create and configure new tab item
+        $2_tabitem = [System.Windows.Controls.TabItem]::new()
+        $2_tabitem.Header = $1_key.ToString()
+        $2_tabitem.Background =$Global:color_systemtab_subheader
+        # add tab to panel
+        $1_tabcontrol_systeminfo.AddChild($2_tabitem)
+
+        $2_scrollviewer = [System.Windows.Controls.ScrollViewer]::new()
+        $2_scrollviewer.HorizontalAlignment="Stretch"
+        $2_scrollviewer.VerticalAlignment="Stretch"
+        $2_scrollviewer_contentpanel = [System.Windows.Controls.StackPanel]::new()
+        $2_scrollviewer.AddChild($2_scrollviewer_contentpanel)
+        
+        $2_dockpanel = [System.Windows.Controls.DockPanel]::new()
+        $2_dockpanel.Background = $Global:color_systemtab_sub
+
+        $2_content_border = [System.Windows.Controls.Border]::new()
+        $2_content_border.CornerRadius = 2
+        $2_content_border.BorderBrush = "#708090"
+        $2_content_border.BorderThickness = 2
+        $2_content_border.Margin = "1 1 1 1"         #margin left top right bottom
+        $2_content_border.AddChild($2_scrollviewer)
+
+        $2_tabitem.AddChild($2_dockpanel)
+        $2_dockpanel.AddChild($2_content_border)
+        
+        ## Add content to the information tab
+        $system_tab_data = $system_data[$1_key]
+        for ($ci = 0; $ci -lt $system_tab_data.Length; $ci++)
+        {
+            $maincontent_object = $system_tab_data[$ci]
+            $maincontent_bold = $maincontent_object["Bold"]
+            $maincontent_content = $maincontent_object["Content"]
+            $maincontent_textbox = $maincontent_object["TextBox"]
+            if ($maincontent_textbox)
+            {
+                $maincontent_text = [System.Windows.Controls.TextBox]::new()
+                if ($maincontent_bold)
+                {
+                    $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
+                }
+                $maincontent_text.Text = $maincontent_content
+                $2_scrollviewer_contentpanel.AddChild($maincontent_text)
+            }
+            else
+            {
+                $maincontent_label = [System.Windows.Controls.Label]::new()
+                if ($maincontent_bold)
+                {
+                    $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
+                }
+                $maincontent_label.Content = $maincontent_content
+                $2_scrollviewer_contentpanel.AddChild($maincontent_label)
+            }
+
+        }
+
+    }
+
+    
+}
+#endregion Quick Tips
 
 
 
