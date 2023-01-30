@@ -218,6 +218,10 @@ $main_searchbar_stack.AddChild($main_searchbar_label)
 $main_searchbar_stack.AddChild($main_searchbar)
 $main_searchbar_group.AddChild($main_searchbar_stack)
 
+### TEST ###
+$search_style = [System.Windows.Style]::new()
+### TEST ###
+
 ### TODO ###
 ### make this less bad ###
 $main_searchbar.Add_TextChanged({
@@ -228,45 +232,48 @@ $main_searchbar.Add_TextChanged({
         if ($c.HasContent)
         {
             $content = $c.Content
+            $tooltip = $c.Tooltip
             $type = $content.GetType().Name
-            if ($type -eq "String")
+            if ($type -eq "String" -or $tooltip -ne $null)
             { 
                 $match = $this.Text.ToLower()
+
+                [bool]$isMatch = 0
+
+                # Search tooltip and main content of a control
+                # if they exist
+                if ($tooltip -ne $null)
+                {
+                    if ($tooltip.ToLower().Contains($match))
+                    {
+                        $isMatch = 1
+                    }
+                }
                 if ($content.ToLower().Contains($match))
                 {
+                    $isMatch = 1
+                }
+
+
+                if ($isMatch)
+                {
+                    # Mark this control since it matches the query
                     $c.Background = "#aaaaff"
-                    # Change parents 
-                    [int]$pc = 0
+
+                    # Work upwards and mark any tabs to guide us down
                     $parent = $c.Parent
-                    while ($pc -lt 10)
+                    while ($parent -ne $null)
                     {
-                        $pc++
-                        if ($parent -eq $null)
+                        [string]$type = $parent.GetType().Name
+                        if ($type.Contains("TabItem"))
                         {
-                            break;
-                        }
-                        
-                        for($d = 0; $d -lt 8; $d++)
-                        {
-                            [string]$type = $parent.GetType().Name
-                            if ($type.Contains("TabItem"))
-                            {
-                                $parent.Background = "#ccccff"
-                                $parent.Foreground = "#800000"
-                            }
-                            $parent = $parent.Parent
-                            if ($parent -eq $null)
-                            {
-                                break;
-                            }
+                            # Colour tabs for navigation
+                            $parent.Background = "#ccccff"
+                            $parent.Foreground = "#800000"
                         }
 
-                        if (0)
-                        {
-                        $parent.Background = "#000000"
+                        # Move up a level
                         $parent = $parent.Parent
-                        }
-
                     }
                 } 
             }
@@ -445,6 +452,7 @@ foreach ($0_key in $Global:systems.Keys)
             if ($maincontent_textbox)
             {
                 $maincontent_text = CreateTextBox
+                $maincontent_text.Margin="4 4 4 4"
                 if ($maincontent_bold)
                 {
                     $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
@@ -545,6 +553,7 @@ foreach ($0_key in $Global:tips.Keys)
             {
                 $maincontent_text = CreateTextBox
                 $maincontent_text.ToolTip = $maincontent_content
+                $maincontent_text.Margin="4 4 4 4"
                 if ($maincontent_bold)
                 {
                     $maincontent_text.FontWeight = [System.Windows.FontWeights]::Bold
@@ -562,12 +571,8 @@ foreach ($0_key in $Global:tips.Keys)
                 $maincontent_label.Content = $maincontent_content
                 $2_scrollviewer_contentpanel.AddChild($maincontent_label)
             }
-
         }
-
-    }
-
-    
+    }    
 }
 #endregion Quick Tips
 
