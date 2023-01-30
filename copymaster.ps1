@@ -1,41 +1,90 @@
 Add-Type -AssemblyName PresentationFramework
 [System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions")
 
-#### TODO ####
-# Merge all json into a single file
-#### TODO ####
+### Load Data ###
 [System.Collections.Hashtable] $Global:data = [System.Collections.Hashtable]::new()
 $Global:data_path = "$PWD\data.json"
+
+# Set icon
 $icon_path = "$PWD\icon.ico"
+
+[System.Collections.Generic.List[[System.Windows.Controls.Control]]]$Global:all_controls = [System.Collections.Generic.List[[System.Windows.Controls.Control]]]::new()
+$Global:all_controls.Capacity = 2048
 
 
 #region Functions
 #region WPF
+
+### Functions to create generic controls and add to global list
 function CreateWindow([string]$title)
 {
-    $window = [System.Windows.Window]::new()
-    $window.Title = $title
-    return $window
+    $Window = [System.Windows.Window]::new()
+    $Window.Title = $title
+    $Global:all_controls.Add($Window)
+    return $Window
+}
+function CreateLabel
+{
+    $Label = [System.Windows.Controls.Label]::new()
+    $Global:all_controls.Add($Label)
+    return $Label
+}
+function CreateButton
+{
+    $Button = [System.Windows.Controls.Button]::new()
+    $Global:all_controls.Add($Button)
+    return $Button
+}
+function CreateBorder
+{
+    $Border = [System.Windows.Controls.Border]::new()
+    #$Global:all_controls.Add($Border)
+    return $Border
+}
+function CreateScrollViewer
+{
+    $ScrollViewer = [System.Windows.Controls.ScrollViewer]::new()
+    $Global:all_controls.Add($ScrollViewer)
+    return $ScrollViewer
+}
+function CreateTextBox
+{
+    $TextBox = [System.Windows.Controls.TextBox]::new()
+    $Global:all_controls.Add($TextBox)
+    return $TextBox
+}
+function CreateDockPanel
+{
+    $DockPanel = [System.Windows.Controls.DockPanel]::new()
+    #$Global:all_controls.Add($DockPanel)
+    return $DockPanel
+}
+function CreateStackPanel
+{
+    $StackPanel = [System.Windows.Controls.StackPanel]::new()
+    #$Global:all_controls.Add($StackPanel)
+    return $StackPanel
+}
+function CreateTabControl
+{
+    $TabControl = [System.Windows.Controls.TabControl]::new()
+    $Global:all_controls.Add($TabControl)
+    return $TabControl
+}
+function CreateTabItem
+{
+    $TabItem = [System.Windows.Controls.TabItem]::new()
+    $Global:all_controls.Add($TabItem)
+    return $TabItem
 }
 
-function CreateGrid([int]$size_x, [int]$size_y)
-{
-    $grid = [System.Windows.Controls.Grid]::new()
-    for ($x = 0; $x -lt $size_x; $x++)
-    {
-        $column = [System.Windows.Controls.ColumnDefinition]::new()
-        $column.Width = "Auto"
-        $grid.ColumnDefinitions.Add($column)
-    }
-    for ($y = 0; $x -lt $size_y; $y++)
-    {
-        $row = [System.Windows.Controls.ColumnDefinition]::new()
-        $row.Height = "Auto"
-        $grid.ColumnDefinitions.Add($row)
-    }
-    return $grid
-}
+
+
+
 #endregion WPF
+
+#region Json
+
 function Parse-JsonFile([string]$file) {
     $text = [IO.File]::ReadAllText($file)
     $parser = New-Object Web.Script.Serialization.JavaScriptSerializer
@@ -43,9 +92,7 @@ function Parse-JsonFile([string]$file) {
     Write-Output -NoEnumerate $parser.DeserializeObject($text)
 }
 
-#### TODO ####
-# Merge all json into a single file
-#### TODO ####
+
 function LoadData
 {
     # Ensure strings file exists.
@@ -71,6 +118,7 @@ function AddJsonString([string]$identifier, [string]$title,[string]$content,[str
     $data = @($title, $content, $category, $favourite)
     $Global:strings[$identifier] = $data
 }
+#endregion Json
 
 #region UTIL
 Function HSLtoRGB ($H,$S,$L) {
@@ -134,7 +182,7 @@ function HSLtoHEX($values)
 
 
 #region Interface
-$window = CreateWindow "CopyMaster 5000"
+[System.Windows.Window] $window = CreateWindow "CopyMaster 5000"
 $window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
 $window.Width = 800
 $window.Height = 512
@@ -143,14 +191,96 @@ $window.Add_LostKeyboardFocus({
     $main_header.Content=""
 })
 
-$main_dock = [System.Windows.Controls.DockPanel]::new()
+$main_dock = CreateDockPanel
 $main_dock.Background = "#dddddd"
 
 ### LOAD DATA ###
 LoadData
 
+
+### Search Bar ###
+$main_searchbar_group = CreateBorder
+$main_searchbar_group.CornerRadius = 2
+$main_searchbar_group.BorderBrush = "Black"
+$main_searchbar_group.BorderThickness = 2
+$main_searchbar_group.Margin = "4 1 4 0"         #margin left top right bottom
+
+
+$main_searchbar_stack = CreateStackPanel
+$main_searchbar = CreateTextBox
+$main_searchbar_label = CreateLabel
+$main_searchbar_stack.Orientation="Horizontal"
+$main_searchbar.MinWidth = 128
+$main_searchbar.Margin = "2 2 2 2"
+$main_searchbar_label.Margin = "2 2 2 2" 
+$main_searchbar_label.Content="Search: "
+$main_searchbar_stack.AddChild($main_searchbar_label)
+$main_searchbar_stack.AddChild($main_searchbar)
+$main_searchbar_group.AddChild($main_searchbar_stack)
+
+### TODO ###
+### make this less bad ###
+$main_searchbar.Add_TextChanged({
+    foreach($c in $Global:all_controls)
+    {
+        $c.Background = "#eeeeee"   
+        $c.Foreground = "#000000"      
+        if ($c.HasContent)
+        {
+            $content = $c.Content
+            $type = $content.GetType().Name
+            if ($type -eq "String")
+            { 
+                $match = $this.Text.ToLower()
+                if ($content.ToLower().Contains($match))
+                {
+                    $c.Background = "#aaaaff"
+                    # Change parents 
+                    [int]$pc = 0
+                    $parent = $c.Parent
+                    while ($pc -lt 10)
+                    {
+                        $pc++
+                        if ($parent -eq $null)
+                        {
+                            break;
+                        }
+                        
+                        for($d = 0; $d -lt 8; $d++)
+                        {
+                            [string]$type = $parent.GetType().Name
+                            if ($type.Contains("TabItem"))
+                            {
+                                $parent.Background = "#ccccff"
+                                $parent.Foreground = "#800000"
+                            }
+                            $parent = $parent.Parent
+                            if ($parent -eq $null)
+                            {
+                                break;
+                            }
+                        }
+
+                        if (0)
+                        {
+                        $parent.Background = "#000000"
+                        $parent = $parent.Parent
+                        }
+
+                    }
+                } 
+            }
+        }
+    }
+})
+
+
+
+
+
+
 ### CREATE TABS ###
-$main_tabs = [System.Windows.Controls.TabControl]::new()
+$main_tabs = CreateTabControl
 
 ## COLOURS ##
 [double]$hue = Get-Random -Minimum 0 -Maximum 360
@@ -171,7 +301,7 @@ $Global:strings = $Global:data["Strings"]
 foreach ($0_key in $Global:strings.Keys)
 {
     # Create and configure new tab item
-    $0_tabitem = [System.Windows.Controls.TabItem]::new()
+    $0_tabitem = CreateTabItem
     $0_tabitem.Header = $0_key.ToString()
     $0_tabitem.Background =$Global:color_maintab_header
     # add tab to panel
@@ -181,16 +311,16 @@ foreach ($0_key in $Global:strings.Keys)
     $1_dictionary = $Global:strings[$0_key]
 
     # Dock panel for tab content parent
-    $1_dockpanel = [System.Windows.Controls.DockPanel]::new()
+    $1_dockpanel = CreateDockPanel
     $1_dockpanel.Background = $Global:color_maintab
 
     # ScrollViewer to allow scrolling when content extends beyond window
-    $1_scrollviewer = [System.Windows.Controls.ScrollViewer]::new()
+    $1_scrollviewer = CreateScrollViewer
     [System.Windows.Controls.DockPanel]::SetDock($1_scrollviewer, [System.Windows.Controls.Dock]::Left)
     $1_scrollviewer.HorizontalAlignment="Stretch"
     $1_scrollviewer.VerticalAlignment="Stretch"
     $1_scrollviewer.HorizontalScrollBarVisibility=[System.Windows.Controls.ScrollBarVisibility]::Visible
-    $1_scrollviewer_contentpanel = [System.Windows.Controls.StackPanel]::new()
+    $1_scrollviewer_contentpanel = CreateStackPanel
     $1_scrollviewer.AddChild($1_scrollviewer_contentpanel)
     $1_dockpanel.AddChild($1_scrollviewer)
 
@@ -198,7 +328,7 @@ foreach ($0_key in $Global:strings.Keys)
     foreach ($1_key in $1_dictionary.Keys)
     {
         # Border for the button
-        $1_border = [System.Windows.Controls.Border]::new()
+        $1_border = CreateBorder
         $1_border.CornerRadius = 2
         $1_border.BorderBrush = "Black"
         $1_border.BorderThickness = 2
@@ -216,7 +346,7 @@ foreach ($0_key in $Global:strings.Keys)
         $button_content = $button_data["Content"]
 
         # Create and configure the button
-        $button = [System.Windows.Controls.Button]::new()
+        $button = CreateButton
         $button.Content = $button_title
         $button.Padding = "4 4 4 4"
         $button.Tag = $button_id
@@ -243,11 +373,11 @@ foreach ($0_key in $Global:strings.Keys)
 #endregion Strings
 
 #region Systems
-$tab_main_systems = [System.Windows.Controls.TabItem]::new()
+$tab_main_systems = CreateTabItem
 $tab_main_systems.Header="Systems"
 $tab_main_systems.Background = $Global:color_maintab_header
-$tab_systems = [System.Windows.Controls.TabControl]::new()
-$dockpanel_systems = [System.Windows.Controls.DockPanel]::new()
+$tab_systems = CreateTabControl
+$dockpanel_systems = CreateDockPanel
 $dockpanel_systems.AddChild($tab_systems)
 $tab_main_systems.AddChild($dockpanel_systems)
 $main_tabs.AddChild($tab_main_systems)
@@ -258,19 +388,19 @@ $Global:systems = $Global:data["Systems"]
 foreach ($0_key in $Global:systems.Keys)
 {
     # Create and configure new tab item
-    $0_tabitem = [System.Windows.Controls.TabItem]::new()
+    $0_tabitem = CreateTabItem
     $0_tabitem.Header = $0_key.ToString()
     $0_tabitem.Background =$Global:color_systemtab_header
     # add tab to panel
     $tab_systems.AddChild($0_tabitem)
     
     # Dock panel for tab content parent
-    $1_dockpanel = [System.Windows.Controls.DockPanel]::new()
+    $1_dockpanel = CreateDockPanel
     $1_dockpanel.Background = $Global:color_systemtab
     $0_tabitem.AddChild($1_dockpanel)
 
     # Create tab control for system information
-    $1_tabcontrol_systeminfo = [System.Windows.Controls.TabControl]::new()
+    $1_tabcontrol_systeminfo = CreateTabControl
     $1_dockpanel.AddChild($1_tabcontrol_systeminfo)
     
     # Get info tabs for the system    
@@ -279,22 +409,22 @@ foreach ($0_key in $Global:systems.Keys)
     foreach ($1_key in $system_data.Keys)
     {
         # Create and configure new tab item
-        $2_tabitem = [System.Windows.Controls.TabItem]::new()
+        $2_tabitem = CreateTabItem
         $2_tabitem.Header = $1_key.ToString()
         $2_tabitem.Background =$Global:color_systemtab_subheader
         # add tab to panel
         $1_tabcontrol_systeminfo.AddChild($2_tabitem)
 
-        $2_scrollviewer = [System.Windows.Controls.ScrollViewer]::new()
+        $2_scrollviewer = CreateScrollViewer
         $2_scrollviewer.HorizontalAlignment="Stretch"
         $2_scrollviewer.VerticalAlignment="Stretch"
-        $2_scrollviewer_contentpanel = [System.Windows.Controls.StackPanel]::new()
+        $2_scrollviewer_contentpanel = CreateStackPanel
         $2_scrollviewer.AddChild($2_scrollviewer_contentpanel)
         
-        $2_dockpanel = [System.Windows.Controls.DockPanel]::new()
+        $2_dockpanel = CreateDockPanel
         $2_dockpanel.Background = $Global:color_systemtab_sub
 
-        $2_content_border = [System.Windows.Controls.Border]::new()
+        $2_content_border = CreateBorder
         $2_content_border.CornerRadius = 2
         $2_content_border.BorderBrush = "#708090"
         $2_content_border.BorderThickness = 2
@@ -314,7 +444,7 @@ foreach ($0_key in $Global:systems.Keys)
             $maincontent_textbox = $maincontent_object["TextBox"]
             if ($maincontent_textbox)
             {
-                $maincontent_text = [System.Windows.Controls.TextBox]::new()
+                $maincontent_text = CreateTextBox
                 if ($maincontent_bold)
                 {
                     $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
@@ -324,7 +454,7 @@ foreach ($0_key in $Global:systems.Keys)
             }
             else
             {
-                $maincontent_label = [System.Windows.Controls.Label]::new()
+                $maincontent_label = CreateLabel
                 if ($maincontent_bold)
                 {
                     $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
@@ -342,11 +472,11 @@ foreach ($0_key in $Global:systems.Keys)
 #endregion Systems
 
 #region Quick Tips
-$tab_tips = [System.Windows.Controls.TabItem]::new()
+$tab_tips = CreateTabItem
 $tab_tips.Header="Useful Tips"
 $tab_tips.Background = $Global:color_maintab_header
-$tabcontrol_tips = [System.Windows.Controls.TabControl]::new()
-$dockpanel_tips = [System.Windows.Controls.DockPanel]::new()
+$tabcontrol_tips = CreateTabControl
+$dockpanel_tips = CreateDockPanel
 $dockpanel_tips.AddChild($tabcontrol_tips)
 $tab_tips.AddChild($dockpanel_tips)
 $main_tabs.AddChild($tab_tips)
@@ -357,19 +487,19 @@ $Global:tips = $Global:data["Tips"]
 foreach ($0_key in $Global:tips.Keys)
 {
     # Create and configure new tab item
-    $0_tabitem = [System.Windows.Controls.TabItem]::new()
+    $0_tabitem = CreateTabItem
     $0_tabitem.Header = $0_key.ToString()
     $0_tabitem.Background =$Global:color_systemtab_header
     # add tab to panel
     $tabcontrol_tips.AddChild($0_tabitem)
     
     # Dock panel for tab content parent
-    $1_dockpanel = [System.Windows.Controls.DockPanel]::new()
+    $1_dockpanel = CreateDockPanel
     $1_dockpanel.Background = $Global:color_systemtab
     $0_tabitem.AddChild($1_dockpanel)
 
     # Create tab control for system information
-    $1_tabcontrol_systeminfo = [System.Windows.Controls.TabControl]::new()
+    $1_tabcontrol_systeminfo = CreateTabControl
     $1_dockpanel.AddChild($1_tabcontrol_systeminfo)
     
     # Get info tabs for the system    
@@ -378,22 +508,22 @@ foreach ($0_key in $Global:tips.Keys)
     foreach ($1_key in $system_data.Keys)
     {
         # Create and configure new tab item
-        $2_tabitem = [System.Windows.Controls.TabItem]::new()
+        $2_tabitem = CreateTabItem
         $2_tabitem.Header = $1_key.ToString()
         $2_tabitem.Background =$Global:color_systemtab_subheader
         # add tab to panel
         $1_tabcontrol_systeminfo.AddChild($2_tabitem)
 
-        $2_scrollviewer = [System.Windows.Controls.ScrollViewer]::new()
+        $2_scrollviewer = CreateScrollViewer
         $2_scrollviewer.HorizontalAlignment="Stretch"
         $2_scrollviewer.VerticalAlignment="Stretch"
-        $2_scrollviewer_contentpanel = [System.Windows.Controls.StackPanel]::new()
+        $2_scrollviewer_contentpanel = CreateStackPanel
         $2_scrollviewer.AddChild($2_scrollviewer_contentpanel)
         
-        $2_dockpanel = [System.Windows.Controls.DockPanel]::new()
+        $2_dockpanel = CreateDockPanel
         $2_dockpanel.Background = $Global:color_systemtab_sub
 
-        $2_content_border = [System.Windows.Controls.Border]::new()
+        $2_content_border = CreateBorder
         $2_content_border.CornerRadius = 2
         $2_content_border.BorderBrush = "#708090"
         $2_content_border.BorderThickness = 2
@@ -413,17 +543,18 @@ foreach ($0_key in $Global:tips.Keys)
             $maincontent_textbox = $maincontent_object["TextBox"]
             if ($maincontent_textbox)
             {
-                $maincontent_text = [System.Windows.Controls.TextBox]::new()
+                $maincontent_text = CreateTextBox
+                $maincontent_text.ToolTip = $maincontent_content
                 if ($maincontent_bold)
                 {
-                    $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
+                    $maincontent_text.FontWeight = [System.Windows.FontWeights]::Bold
                 }
                 $maincontent_text.Text = $maincontent_content
                 $2_scrollviewer_contentpanel.AddChild($maincontent_text)
             }
             else
             {
-                $maincontent_label = [System.Windows.Controls.Label]::new()
+                $maincontent_label = CreateLabel
                 if ($maincontent_bold)
                 {
                     $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
@@ -443,9 +574,9 @@ foreach ($0_key in $Global:tips.Keys)
 
 
 # Label at the top of the screen for information
-$main_header = [System.Windows.Controls.Label]::new()
+$main_header = CreateLabel
 $main_header.Content = "" 
-$main_header_border = [System.Windows.Controls.Border]::new()
+$main_header_border = CreateBorder
 $main_header_border.BorderBrush = "Black"
 $main_header_border.BorderThickness = 1
 $main_header_border.Margin = "1 1 1 1"
@@ -453,10 +584,12 @@ $main_header_border.AddChild($main_header)
 
 # Dock main window elements
 [System.Windows.Controls.DockPanel]::SetDock($main_header_border, [System.Windows.Controls.Dock]::Bottom)
+[System.Windows.Controls.DockPanel]::SetDock($main_searchbar_group, [System.Windows.Controls.Dock]::Top)
 [System.Windows.Controls.DockPanel]::SetDock($main_tabs, [System.Windows.Controls.Dock]::Top)
 
 # Add main elements to the window
 $main_dock.AddChild($main_header_border)
+$main_dock.AddChild($main_searchbar_group)
 $main_dock.AddChild($main_tabs)
 $window.AddChild($main_dock)
 
