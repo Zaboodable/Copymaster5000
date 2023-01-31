@@ -19,5 +19,7 @@ An all in one solution for your service desk needs.
    <li style="list-style-type:disc">Information about systems</li>
    <li style="list-style-type:disc">Quick buttons for copying common replies/responses</li>
 </ul>
-
 <img src="/copymaster_preview.png"> 
+   
+<h2>Known Issues</h2>
+Currently the search function will remove colours from the application, this is fixable but not a high priority at the moment.
