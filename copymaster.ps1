@@ -223,7 +223,6 @@ $search_style = [System.Windows.Style]::new()
 ### TEST ###
 
 ### TODO ###
-### make this less bad ###
 $main_searchbar.Add_TextChanged({
     foreach($c in $Global:all_controls)
     {
@@ -231,10 +230,13 @@ $main_searchbar.Add_TextChanged({
         $c.Foreground = "#000000"      
         if ($c.HasContent)
         {
-            $content = $c.Content
-            $tooltip = $c.Tooltip
-            $type = $content.GetType().Name
-            if ($type -eq "String" -or $tooltip -ne $null)
+            $control_type = $c.GetType().Name
+            $content = $c.Content    # Labels use content for text
+            $tooltip = $c.Tooltip    # Buttons store copyable data in tooltip
+            $header = $c.Header      # Tabs use the header field for their title
+            $content_type = $content.GetType().Name
+
+            if ($content_type -eq "String" -or $control_type -eq "TabItem")
             { 
                 $match = $this.Text.ToLower()
 
@@ -248,17 +250,27 @@ $main_searchbar.Add_TextChanged({
                     {
                         $isMatch = 1
                     }
-                }
-                if ($content.ToLower().Contains($match))
+                }                                
+                if ($header -ne $null)
                 {
-                    $isMatch = 1
+                    if ($header.ToLower().Contains($match))
+                    {
+                        $isMatch = 1
+                    }
                 }
-
+                if ($content_type -eq "String")
+                {
+                    if ($content.ToLower().Contains($match))
+                    {
+                        $isMatch = 1
+                    }
+                }
 
                 if ($isMatch)
                 {
                     # Mark this control since it matches the query
-                    $c.Background = "#aaaaff"
+                    $c.Background = "#ccccff"
+                    $c.Foreground = "#800000"
 
                     # Work upwards and mark any tabs to guide us down
                     $parent = $c.Parent
