@@ -222,15 +222,39 @@ $main_searchbar_group.AddChild($main_searchbar_stack)
 $search_style = [System.Windows.Style]::new()
 ### TEST ###
 
+$Global:control_colours = @{}                   # Default Colours          # Searched Colours
+$Global:control_colours.Add("TextBox",          @(@("#ffffff", "#000000"), @("#ffffff", "#000000")));
+$Global:control_colours.Add("TabItem",          @(@("#cccccc", "#000000"), @("#c0ffc0", "#000000")));
+$Global:control_colours.Add("ScrollViewer",     @(@("#eeeeee", "#000000"), @("#ffffff", "#000000")));
+$Global:control_colours.Add("Label",            @(@("#eeeeee", "#000000"), @("#aaffaa", "#000000")));
+$Global:control_colours.Add("Button",           @(@("#c0e0e0", "#000000"), @("#c0ffc0", "#000000")));
+
+
 ### TODO ###
 $main_searchbar.Add_TextChanged({
     foreach($c in $Global:all_controls)
     {
-        $c.Background = "#eeeeee"   
-        $c.Foreground = "#000000"      
+
+        [string]$control_type = $c.GetType().Name
+        if ($Global:control_colours.ContainsKey($control_type))
+        {
+            $c.Background = $Global:control_colours[$control_type][0][0]
+            $c.Foreground = $Global:control_colours[$control_type][0][1]
+        }
+        else
+        {
+            $c.Background = "#eeeeee"   
+            $c.Foreground = "#000000"   
+        }  
+        
+        $match = $this.Text.ToLower()
+        if ($match.Length -lt 1)
+        {
+            continue;
+        }
+
         if ($c.HasContent)
         {
-            $control_type = $c.GetType().Name
             $content = $c.Content    # Labels use content for text
             $tooltip = $c.Tooltip    # Buttons store copyable data in tooltip
             $header = $c.Header      # Tabs use the header field for their title
@@ -238,7 +262,6 @@ $main_searchbar.Add_TextChanged({
 
             if ($content_type -eq "String" -or $control_type -eq "TabItem")
             { 
-                $match = $this.Text.ToLower()
 
                 [bool]$isMatch = 0
 
@@ -269,8 +292,17 @@ $main_searchbar.Add_TextChanged({
                 if ($isMatch)
                 {
                     # Mark this control since it matches the query
-                    $c.Background = "#ccccff"
-                    $c.Foreground = "#800000"
+                    if ($Global:control_colours.ContainsKey($control_type))
+                    {
+                        $c.Background = $Global:control_colours[$control_type][1][0]
+                        $c.Foreground = $Global:control_colours[$control_type][1][1]
+                    }
+                    else
+                    {
+                        $c.Background = "#ccccff"
+                        $c.Foreground = "#800000"
+                    }  
+
 
                     # Work upwards and mark any tabs to guide us down
                     $parent = $c.Parent
@@ -280,8 +312,8 @@ $main_searchbar.Add_TextChanged({
                         if ($type.Contains("TabItem"))
                         {
                             # Colour tabs for navigation
-                            $parent.Background = "#ccccff"
-                            $parent.Foreground = "#800000"
+                            $parent.Background = $Global:control_colours["TabItem"][1][0]
+                            $parent.Foreground = $Global:control_colours["TabItem"][1][1]
                         }
 
                         # Move up a level
@@ -297,41 +329,34 @@ $main_searchbar.Add_TextChanged({
 
 
 
-
 ### CREATE TABS ###
 $main_tabs = CreateTabControl
-
-## COLOURS ##
-[double]$hue = Get-Random -Minimum 0 -Maximum 360
-[double]$hue_step = 4
-[double]$sat = 50
-[double]$lum= 75
-
-$Global:color_maintab_header = "#ffffc0"
-$Global:color_systemtab_header = "#c0ffff"
-$Global:color_systemtab_subheader = "#ffc0ff"
-$Global:color_maintab = "#ffffe0"
-$Global:color_systemtab= "#e0ffff"
-$Global:color_systemtab_sub = "#ffe0ff"
 
 ## QUICK COPY TABS [strings.json]##
 #region Strings
 $Global:strings = $Global:data["Strings"]
+
+$tab_main_strings = CreateTabItem
+$tab_main_strings.Header="Quick Copy"
+$tab_strings = CreateTabControl
+$dockpanel_strings = CreateDockPanel
+$dockpanel_strings.AddChild($tab_strings)
+$tab_main_strings.AddChild($dockpanel_strings)
+$main_tabs.AddChild($tab_main_strings)
+
 foreach ($0_key in $Global:strings.Keys)
 {
     # Create and configure new tab item
     $0_tabitem = CreateTabItem
     $0_tabitem.Header = $0_key.ToString()
-    $0_tabitem.Background =$Global:color_maintab_header
     # add tab to panel
-    $main_tabs.AddChild($0_tabitem)
+    $tab_strings.AddChild($0_tabitem)
 
     ## dictionary of content from the json data
     $1_dictionary = $Global:strings[$0_key]
 
     # Dock panel for tab content parent
     $1_dockpanel = CreateDockPanel
-    $1_dockpanel.Background = $Global:color_maintab
 
     # ScrollViewer to allow scrolling when content extends beyond window
     $1_scrollviewer = CreateScrollViewer
@@ -352,10 +377,6 @@ foreach ($0_key in $Global:strings.Keys)
         $1_border.BorderBrush = "Black"
         $1_border.BorderThickness = 2
         $1_border.Margin = "4 1 4 0"         #margin left top right bottom
-        $c = HSLtoRGB $hue $sat $lum
-        $hue += $hue_step
-        $hc = RGBtoHEX $c
-        $1_border.Background = $hc
 
         # Data for the button
         # Title is shown on the button as a quick reference
@@ -394,7 +415,6 @@ foreach ($0_key in $Global:strings.Keys)
 #region Systems
 $tab_main_systems = CreateTabItem
 $tab_main_systems.Header="Systems"
-$tab_main_systems.Background = $Global:color_maintab_header
 $tab_systems = CreateTabControl
 $dockpanel_systems = CreateDockPanel
 $dockpanel_systems.AddChild($tab_systems)
@@ -409,13 +429,11 @@ foreach ($0_key in $Global:systems.Keys)
     # Create and configure new tab item
     $0_tabitem = CreateTabItem
     $0_tabitem.Header = $0_key.ToString()
-    $0_tabitem.Background =$Global:color_systemtab_header
     # add tab to panel
     $tab_systems.AddChild($0_tabitem)
     
     # Dock panel for tab content parent
     $1_dockpanel = CreateDockPanel
-    $1_dockpanel.Background = $Global:color_systemtab
     $0_tabitem.AddChild($1_dockpanel)
 
     # Create tab control for system information
@@ -430,7 +448,6 @@ foreach ($0_key in $Global:systems.Keys)
         # Create and configure new tab item
         $2_tabitem = CreateTabItem
         $2_tabitem.Header = $1_key.ToString()
-        $2_tabitem.Background =$Global:color_systemtab_subheader
         # add tab to panel
         $1_tabcontrol_systeminfo.AddChild($2_tabitem)
 
@@ -441,7 +458,6 @@ foreach ($0_key in $Global:systems.Keys)
         $2_scrollviewer.AddChild($2_scrollviewer_contentpanel)
         
         $2_dockpanel = CreateDockPanel
-        $2_dockpanel.Background = $Global:color_systemtab_sub
 
         $2_content_border = CreateBorder
         $2_content_border.CornerRadius = 2
@@ -494,7 +510,6 @@ foreach ($0_key in $Global:systems.Keys)
 #region Quick Tips
 $tab_tips = CreateTabItem
 $tab_tips.Header="Useful Tips"
-$tab_tips.Background = $Global:color_maintab_header
 $tabcontrol_tips = CreateTabControl
 $dockpanel_tips = CreateDockPanel
 $dockpanel_tips.AddChild($tabcontrol_tips)
@@ -509,13 +524,11 @@ foreach ($0_key in $Global:tips.Keys)
     # Create and configure new tab item
     $0_tabitem = CreateTabItem
     $0_tabitem.Header = $0_key.ToString()
-    $0_tabitem.Background =$Global:color_systemtab_header
     # add tab to panel
     $tabcontrol_tips.AddChild($0_tabitem)
     
     # Dock panel for tab content parent
     $1_dockpanel = CreateDockPanel
-    $1_dockpanel.Background = $Global:color_systemtab
     $0_tabitem.AddChild($1_dockpanel)
 
     # Create tab control for system information
@@ -530,7 +543,6 @@ foreach ($0_key in $Global:tips.Keys)
         # Create and configure new tab item
         $2_tabitem = CreateTabItem
         $2_tabitem.Header = $1_key.ToString()
-        $2_tabitem.Background =$Global:color_systemtab_subheader
         # add tab to panel
         $1_tabcontrol_systeminfo.AddChild($2_tabitem)
 
@@ -541,7 +553,6 @@ foreach ($0_key in $Global:tips.Keys)
         $2_scrollviewer.AddChild($2_scrollviewer_contentpanel)
         
         $2_dockpanel = CreateDockPanel
-        $2_dockpanel.Background = $Global:color_systemtab_sub
 
         $2_content_border = CreateBorder
         $2_content_border.CornerRadius = 2
@@ -610,8 +621,26 @@ $main_dock.AddChild($main_searchbar_group)
 $main_dock.AddChild($main_tabs)
 $window.AddChild($main_dock)
 
+### Set all colours
+foreach($c in $Global:all_controls)
+{
+
+    [string]$control_type = $c.GetType().Name
+    if ($Global:control_colours.ContainsKey($control_type))
+    {
+        $c.Background = $Global:control_colours[$control_type][0][0]
+        $c.Foreground = $Global:control_colours[$control_type][0][1]
+    }
+    else
+    {
+        $c.Background = "#eeeeee"   
+        $c.Foreground = "#000000"   
+    }  
+}
 
 #endregion Interface
+
+
 
 
 $window.ShowDialog()
