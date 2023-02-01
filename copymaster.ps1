@@ -218,9 +218,6 @@ $main_searchbar_stack.AddChild($main_searchbar_label)
 $main_searchbar_stack.AddChild($main_searchbar)
 $main_searchbar_group.AddChild($main_searchbar_stack)
 
-### TEST ###
-$search_style = [System.Windows.Style]::new()
-### TEST ###
 
 $Global:control_colours = @{}                   # Default Colours          # Searched Colours
 $Global:control_colours.Add("TextBox",          @(@("#ffffff", "#000000"), @("#ffffff", "#000000")));
@@ -230,7 +227,6 @@ $Global:control_colours.Add("Label",            @(@("#eeeeee", "#000000"), @("#a
 $Global:control_colours.Add("Button",           @(@("#c0e0e0", "#000000"), @("#c0ffc0", "#000000")));
 
 
-### TODO ###
 $main_searchbar.Add_TextChanged({
     foreach($c in $Global:all_controls)
     {
@@ -323,10 +319,7 @@ $main_searchbar.Add_TextChanged({
             }
         }
     }
-})
-
-
-
+}) # end of searchbar text event
 
 
 ### CREATE TABS ###
@@ -477,6 +470,7 @@ foreach ($0_key in $Global:systems.Keys)
             $maincontent_bold = $maincontent_object["Bold"]
             $maincontent_content = $maincontent_object["Content"]
             $maincontent_textbox = $maincontent_object["TextBox"]
+            $maincontent_isLink = $maincontent_object["Link"]
             if ($maincontent_textbox)
             {
                 $maincontent_text = CreateTextBox
@@ -485,6 +479,16 @@ foreach ($0_key in $Global:systems.Keys)
                 {
                     $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
                 }
+                $maincontent_text.Text = $maincontent_content
+                $2_scrollviewer_contentpanel.AddChild($maincontent_text)
+            }
+            elseif($maincontent_isLink)
+            {
+                $maincontent_text = CreateTextBox
+                $maincontent_text.ToolTip = $maincontent_content
+                $maincontent_text.Margin="4 4 4 4"
+                $maincontent_text.IsReadOnly = 1
+                $maincontent_text.BorderThickness = 0
                 $maincontent_text.Text = $maincontent_content
                 $2_scrollviewer_contentpanel.AddChild($maincontent_text)
             }
@@ -572,6 +576,7 @@ foreach ($0_key in $Global:tips.Keys)
             $maincontent_bold = $maincontent_object["Bold"]
             $maincontent_content = $maincontent_object["Content"]
             $maincontent_textbox = $maincontent_object["TextBox"]
+            $maincontent_isLink    = $maincontent_object["Link"]
             if ($maincontent_textbox)
             {
                 $maincontent_text = CreateTextBox
@@ -581,6 +586,16 @@ foreach ($0_key in $Global:tips.Keys)
                 {
                     $maincontent_text.FontWeight = [System.Windows.FontWeights]::Bold
                 }
+                $maincontent_text.Text = $maincontent_content
+                $2_scrollviewer_contentpanel.AddChild($maincontent_text)
+            }
+            elseif($maincontent_isLink)
+            {
+                $maincontent_text = CreateTextBox
+                $maincontent_text.ToolTip = $maincontent_content
+                $maincontent_text.Margin="4 4 4 4"
+                $maincontent_text.IsReadOnly = 1
+                $maincontent_text.BorderThickness = 0
                 $maincontent_text.Text = $maincontent_content
                 $2_scrollviewer_contentpanel.AddChild($maincontent_text)
             }
@@ -637,10 +652,7 @@ foreach($c in $Global:all_controls)
         $c.Foreground = "#000000"   
     }  
 }
-
 #endregion Interface
 
-
-
-
+# Display the window
 $window.ShowDialog()
