@@ -9,7 +9,7 @@ $Global:data_path = "N:\fcs-data\ITSHARED\Copymaster5000\data.json"
 $icon_path = "$PWD\icon.ico"
 
 [System.Collections.Generic.List[[System.Windows.Controls.Control]]]$Global:all_controls = [System.Collections.Generic.List[[System.Windows.Controls.Control]]]::new()
-$Global:all_controls.Capacity = 2048
+$Global:all_controls.Capacity = 10240
 
 
 #region Functions
@@ -406,213 +406,135 @@ foreach ($0_key in $Global:strings.Keys)
 #endregion Strings
 
 #region Systems
-$tab_main_systems = CreateTabItem
-$tab_main_systems.Header="Systems"
-$tab_systems = CreateTabControl
-$dockpanel_systems = CreateDockPanel
-$dockpanel_systems.AddChild($tab_systems)
-$tab_main_systems.AddChild($dockpanel_systems)
-$main_tabs.AddChild($tab_main_systems)
-
 ## For each system in the json file
 ## Create multiple sub-tabs as defined in the file for misc info related to that system
-$Global:systems = $Global:data["Systems"]
-foreach ($0_key in $Global:systems.Keys)
-{
-    # Create and configure new tab item
-    $0_tabitem = CreateTabItem
-    $0_tabitem.Header = $0_key.ToString()
-    # add tab to panel
-    $tab_systems.AddChild($0_tabitem)
-    
-    # Dock panel for tab content parent
-    $1_dockpanel = CreateDockPanel
-    $0_tabitem.AddChild($1_dockpanel)
+$Global:information = $Global:data["Information"]
 
-    # Create tab control for system information
-    $1_tabcontrol_systeminfo = CreateTabControl
-    $1_dockpanel.AddChild($1_tabcontrol_systeminfo)
-    
-    # Get info tabs for the system    
-    $system_data = $Global:systems[$0_key]
-    ## For each info tab, create content
-    foreach ($1_key in $system_data.Keys)
+foreach ($info_key in $Global:information.Keys)
+{
+    $tab_info = CreateTabItem
+    $tab_info.Header=$info_key.ToString()
+    $tabcontrol_info = CreateTabControl
+    $dockpanel_info = CreateDockPanel
+    $dockpanel_info.AddChild($tabcontrol_info)
+    $tab_info.AddChild($dockpanel_info)
+    $main_tabs.AddChild($tab_info)
+
+    ## For each system in the json file
+    ## Create multiple sub-tabs as defined in the file for misc info related to that system
+    $info_data = $Global:information[$info_key]
+    foreach ($0_key in $info_data.Keys)
     {
         # Create and configure new tab item
-        $2_tabitem = CreateTabItem
-        $2_tabitem.Header = $1_key.ToString()
+        $0_tabitem = CreateTabItem
+        $0_tabitem.Header = $0_key.ToString()
         # add tab to panel
-        $1_tabcontrol_systeminfo.AddChild($2_tabitem)
+        $tabcontrol_info.AddChild($0_tabitem)
+    
+        # Dock panel for tab content parent
+        $1_dockpanel = CreateDockPanel
+        $0_tabitem.AddChild($1_dockpanel)
 
-        $2_scrollviewer = CreateScrollViewer
-        $2_scrollviewer.HorizontalAlignment="Stretch"
-        $2_scrollviewer.VerticalAlignment="Stretch"
-        $2_scrollviewer_contentpanel = CreateStackPanel
-        $2_scrollviewer.AddChild($2_scrollviewer_contentpanel)
-        
-        $2_dockpanel = CreateDockPanel
-
-        $2_content_border = CreateBorder
-        $2_content_border.CornerRadius = 2
-        $2_content_border.BorderBrush = "#708090"
-        $2_content_border.BorderThickness = 2
-        $2_content_border.Margin = "1 1 1 1"         #margin left top right bottom
-        $2_content_border.AddChild($2_scrollviewer)
-
-        $2_tabitem.AddChild($2_dockpanel)
-        $2_dockpanel.AddChild($2_content_border)
-        
-        ## Add content to the information tab
-        $system_tab_data = $system_data[$1_key]
-        for ($ci = 0; $ci -lt $system_tab_data.Length; $ci++)
+        # Create tab control for system information
+        $1_tabcontrol_info = CreateTabControl
+        $1_dockpanel.AddChild($1_tabcontrol_info)
+    
+        # Get info tabs for the system    
+        $1_infodata = $info_data[$0_key]
+        ## For each info tab, create content
+        foreach ($1_key in $1_infodata.Keys)
         {
-            $maincontent_object = $system_tab_data[$ci]
-            $maincontent_bold = $maincontent_object["Bold"]
-            $maincontent_content = $maincontent_object["Content"]
-            $maincontent_textbox = $maincontent_object["TextBox"]
-            $maincontent_isLink = $maincontent_object["Link"]
-            if ($maincontent_textbox)
-            {
-                $maincontent_text = CreateTextBox
-                $maincontent_text.Margin="4 4 4 4"
-                if ($maincontent_bold)
-                {
-                    $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
-                }
-                $maincontent_text.Text = $maincontent_content
-                $2_scrollviewer_contentpanel.AddChild($maincontent_text)
-            }
-            elseif($maincontent_isLink)
-            {
-                $maincontent_text = CreateTextBox
-                $maincontent_text.ToolTip = $maincontent_content
-                $maincontent_text.Margin="4 4 4 4"
-                $maincontent_text.IsReadOnly = 1
-                $maincontent_text.BorderThickness = 0
-                $maincontent_text.Text = $maincontent_content
-                $2_scrollviewer_contentpanel.AddChild($maincontent_text)
-            }
-            else
-            {
-                $maincontent_label = CreateLabel
-                if ($maincontent_bold)
-                {
-                    $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
-                }
-                $maincontent_label.Content = $maincontent_content
-                $2_scrollviewer_contentpanel.AddChild($maincontent_label)
-            }
+            # Create and configure new tab item
+            $2_tabitem = CreateTabItem
+            $2_tabitem.Header = $1_key.ToString()
+            # add tab to panel
+            $1_tabcontrol_info.AddChild($2_tabitem)
 
-        }
+            $2_scrollviewer = CreateScrollViewer
+            $2_scrollviewer.HorizontalAlignment="Stretch"
+            $2_scrollviewer.VerticalAlignment="Stretch"
+            $2_scrollviewer_contentpanel = CreateStackPanel
+            $2_scrollviewer.AddChild($2_scrollviewer_contentpanel)
+        
+            $2_dockpanel = CreateDockPanel
 
+            $2_content_border = CreateBorder
+            $2_content_border.CornerRadius = 2
+            $2_content_border.BorderBrush = "#708090"
+            $2_content_border.BorderThickness = 2
+            $2_content_border.Margin = "1 1 1 1"         #margin left top right bottom
+            $2_content_border.AddChild($2_scrollviewer)
+
+            $2_tabitem.AddChild($2_dockpanel)
+            $2_dockpanel.AddChild($2_content_border)
+        
+            ## Add content to the information tab
+            $info_tab_data = $1_infodata[$1_key]
+            for ($ci = 0; $ci -lt $info_tab_data.Length; $ci++)
+            {
+                $maincontent_object = $info_tab_data[$ci]
+                $maincontent_bold = $maincontent_object["Bold"]
+                $maincontent_content = $maincontent_object["Content"]
+                $maincontent_textbox = $maincontent_object["TextBox"]
+                $maincontent_isLink = $maincontent_object["Link"]
+                $maincontent_hasLinkTitle = $maincontent_object["Title"]
+                if ($maincontent_textbox)
+                {
+                    $maincontent_text = CreateTextBox
+                    $maincontent_text.Margin="4 4 4 4"
+                    if ($maincontent_bold)
+                    {
+                        $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
+                    }
+                    $maincontent_text.Text = $maincontent_content
+                    $2_scrollviewer_contentpanel.AddChild($maincontent_text)
+                }
+                elseif($maincontent_isLink)
+                {
+                    $button_copy_link = CreateButton
+                    $button_copy_link.Content = $maincontent_content
+                    if ($maincontent_hasLinkTitle)
+                    {
+                        $button_copy_link.Content = $maincontent_hasLinkTitle
+                    }
+                    $button_copy_link.Padding = "2 2 2 2"
+                    $button_copy_link.Margin = "2 2 2 2"
+                    $button_copy_link.Tag = $button_id
+                    $button_copy_link.Tooltip = $maincontent_content    
+                    $button_copy_link.Background = "Transparent"
+
+                    # Button click event
+                    $button_copy_link.Add_Click({            
+                        # Copy the tooltip data to the clipboard
+                        # Update main header for feedback
+                        Set-Clipboard -Value $this.Tooltip
+                        $main_header.Content = [string]::Format("Copied:{1}{0}", $this.Tooltip, [Environment]::NewLine)
+                    })
+                    $2_scrollviewer_contentpanel.AddChild($button_copy_link)
+
+
+                    #$maincontent_text = CreateTextBox
+                    #$maincontent_text.ToolTip = $maincontent_content
+                    #$maincontent_text.Margin="4 4 4 4"
+                    #$maincontent_text.IsReadOnly = 1
+                    #$maincontent_text.BorderThickness = 0
+                    #$maincontent_text.Text = $maincontent_content
+                    #$2_scrollviewer_contentpanel.AddChild($maincontent_text)
+                }
+                else
+                {
+                    $maincontent_label = CreateLabel
+                    if ($maincontent_bold)
+                    {
+                        $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
+                    }
+                    $maincontent_label.Content = $maincontent_content
+                    $2_scrollviewer_contentpanel.AddChild($maincontent_label)
+                }
+            }
+        }    
     }
-
-    
 }
-#endregion Systems
-
-#region Quick Tips
-$tab_tips = CreateTabItem
-$tab_tips.Header="Useful Tips"
-$tabcontrol_tips = CreateTabControl
-$dockpanel_tips = CreateDockPanel
-$dockpanel_tips.AddChild($tabcontrol_tips)
-$tab_tips.AddChild($dockpanel_tips)
-$main_tabs.AddChild($tab_tips)
-
-## For each system in the json file
-## Create multiple sub-tabs as defined in the file for misc info related to that system
-$Global:tips = $Global:data["Tips"]
-foreach ($0_key in $Global:tips.Keys)
-{
-    # Create and configure new tab item
-    $0_tabitem = CreateTabItem
-    $0_tabitem.Header = $0_key.ToString()
-    # add tab to panel
-    $tabcontrol_tips.AddChild($0_tabitem)
-    
-    # Dock panel for tab content parent
-    $1_dockpanel = CreateDockPanel
-    $0_tabitem.AddChild($1_dockpanel)
-
-    # Create tab control for system information
-    $1_tabcontrol_systeminfo = CreateTabControl
-    $1_dockpanel.AddChild($1_tabcontrol_systeminfo)
-    
-    # Get info tabs for the system    
-    $system_data = $Global:tips[$0_key]
-    ## For each info tab, create content
-    foreach ($1_key in $system_data.Keys)
-    {
-        # Create and configure new tab item
-        $2_tabitem = CreateTabItem
-        $2_tabitem.Header = $1_key.ToString()
-        # add tab to panel
-        $1_tabcontrol_systeminfo.AddChild($2_tabitem)
-
-        $2_scrollviewer = CreateScrollViewer
-        $2_scrollviewer.HorizontalAlignment="Stretch"
-        $2_scrollviewer.VerticalAlignment="Stretch"
-        $2_scrollviewer_contentpanel = CreateStackPanel
-        $2_scrollviewer.AddChild($2_scrollviewer_contentpanel)
-        
-        $2_dockpanel = CreateDockPanel
-
-        $2_content_border = CreateBorder
-        $2_content_border.CornerRadius = 2
-        $2_content_border.BorderBrush = "#708090"
-        $2_content_border.BorderThickness = 2
-        $2_content_border.Margin = "1 1 1 1"         #margin left top right bottom
-        $2_content_border.AddChild($2_scrollviewer)
-
-        $2_tabitem.AddChild($2_dockpanel)
-        $2_dockpanel.AddChild($2_content_border)
-        
-        ## Add content to the information tab
-        $system_tab_data = $system_data[$1_key]
-        for ($ci = 0; $ci -lt $system_tab_data.Length; $ci++)
-        {
-            $maincontent_object = $system_tab_data[$ci]
-            $maincontent_bold = $maincontent_object["Bold"]
-            $maincontent_content = $maincontent_object["Content"]
-            $maincontent_textbox = $maincontent_object["TextBox"]
-            $maincontent_isLink    = $maincontent_object["Link"]
-            if ($maincontent_textbox)
-            {
-                $maincontent_text = CreateTextBox
-                $maincontent_text.ToolTip = $maincontent_content
-                $maincontent_text.Margin="4 4 4 4"
-                if ($maincontent_bold)
-                {
-                    $maincontent_text.FontWeight = [System.Windows.FontWeights]::Bold
-                }
-                $maincontent_text.Text = $maincontent_content
-                $2_scrollviewer_contentpanel.AddChild($maincontent_text)
-            }
-            elseif($maincontent_isLink)
-            {
-                $maincontent_text = CreateTextBox
-                $maincontent_text.ToolTip = $maincontent_content
-                $maincontent_text.Margin="4 4 4 4"
-                $maincontent_text.IsReadOnly = 1
-                $maincontent_text.BorderThickness = 0
-                $maincontent_text.Text = $maincontent_content
-                $2_scrollviewer_contentpanel.AddChild($maincontent_text)
-            }
-            else
-            {
-                $maincontent_label = CreateLabel
-                if ($maincontent_bold)
-                {
-                    $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
-                }
-                $maincontent_label.Content = $maincontent_content
-                $2_scrollviewer_contentpanel.AddChild($maincontent_label)
-            }
-        }
-    }    
-}
-#endregion Quick Tips
 
 
 
