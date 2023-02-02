@@ -475,21 +475,9 @@ foreach ($info_key in $Global:information.Keys)
                 $maincontent_object = $info_tab_data[$ci]
                 $maincontent_bold = $maincontent_object["Bold"]
                 $maincontent_content = $maincontent_object["Content"]
-                $maincontent_textbox = $maincontent_object["TextBox"]
                 $maincontent_isLink = $maincontent_object["Link"]
                 $maincontent_hasLinkTitle = $maincontent_object["Title"]
-                if ($maincontent_textbox)
-                {
-                    $maincontent_text = CreateTextBox
-                    $maincontent_text.Margin="4 4 4 4"
-                    if ($maincontent_bold)
-                    {
-                        $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
-                    }
-                    $maincontent_text.Text = $maincontent_content
-                    $2_scrollviewer_contentpanel.AddChild($maincontent_text)
-                }
-                elseif($maincontent_isLink)
+                if($maincontent_isLink)
                 {
                     $button_copy_link = CreateButton
                     $button_copy_link.Content = $maincontent_content
@@ -497,8 +485,7 @@ foreach ($info_key in $Global:information.Keys)
                     {
                         $button_copy_link.Content = $maincontent_hasLinkTitle
                     }
-                    $button_copy_link.Padding = "2 2 2 2"
-                    $button_copy_link.Margin = "2 2 2 2"
+                    $button_copy_link.Margin = "8 4 8 4"
                     $button_copy_link.Tag = $button_id
                     $button_copy_link.Tooltip = $maincontent_content    
                     $button_copy_link.Background = "Transparent"
@@ -511,22 +498,22 @@ foreach ($info_key in $Global:information.Keys)
                         $main_header.Content = [string]::Format("Copied:{1}{0}", $this.Tooltip, [Environment]::NewLine)
                     })
                     $2_scrollviewer_contentpanel.AddChild($button_copy_link)
-
-
-                    #$maincontent_text = CreateTextBox
-                    #$maincontent_text.ToolTip = $maincontent_content
-                    #$maincontent_text.Margin="4 4 4 4"
-                    #$maincontent_text.IsReadOnly = 1
-                    #$maincontent_text.BorderThickness = 0
-                    #$maincontent_text.Text = $maincontent_content
-                    #$2_scrollviewer_contentpanel.AddChild($maincontent_text)
                 }
                 else
                 {
+                    ### Standard text ###
                     $maincontent_label = CreateLabel
                     if ($maincontent_bold)
                     {
                         $maincontent_label.FontWeight = [System.Windows.FontWeights]::Bold
+                        $maincontent_label.Padding = "0 0 0 0"
+                        $maincontent_label.Margin = "4 4 4 0"
+                    }
+                    else
+                    {
+                        $maincontent_label.Padding = "0 0 0 0"
+                        $maincontent_label.Margin = "8 0 8 0"
+
                     }
                     $maincontent_label.Content = $maincontent_content
                     $2_scrollviewer_contentpanel.AddChild($maincontent_label)
@@ -535,8 +522,6 @@ foreach ($info_key in $Global:information.Keys)
         }    
     }
 }
-
-
 
 # Label at the top of the screen for information
 $main_header = CreateLabel
