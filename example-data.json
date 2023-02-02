@@ -1,0 +1,122 @@
+{
+    "Information": {
+        "Systems": {
+            "System Example": {
+                "Info": [
+                    {
+                        "Content": "Owner: Peter McSystem"
+                    },
+                    {
+                        "Content": "Primary Team: Systems Team Alpha"
+                    }
+                ]
+            },
+            "Another System": {
+                "Info": [
+                    {
+                        "Content": "Owner: John Johnson"
+                    },
+                    {
+                        "Content": "Primary Team: Systems Team"
+                    }
+                ],
+                "Links": [
+                    {
+                        "Bold": true,
+                        "Content": "Guide to fix issue"
+                    },
+                    {
+                        "Link": true,
+                        "Content": "https://127.0.0.1"
+                    }
+                ]
+            }
+        },
+        "Tips": {
+            "Software": {
+                "New Software": [
+                    {
+                        "Bold": true,
+                        "Content": "To install new software"
+                    },
+                    {
+                        "Content": "1) Download the software\n2) Install the software"
+                    }
+                ]
+            },
+            "Computer": {
+                "Locked by Admin": [
+                    {
+                        "Bold": true,
+                        "Content": "Unlock the thing"
+                    },
+                    {
+                        "Content": "Fix the computer"
+                    }
+                ]
+            } ,
+            "Computer2": {
+                "Locked by Admin": [
+                    {
+                        "Bold": true,
+                        "Content": "Unlock the thing"
+                    },
+                    {
+                        "Content": "Fix the computer"
+                    }
+                ]
+            }  ,
+            "Computer3": {
+                "Locked by Admin": [
+                    {
+                        "Bold": true,
+                        "Content": "Unlock the thing"
+                    },
+                    {
+                        "Content": "Fix the computer"
+                    }
+                ]
+            }  ,
+            "Computer4": {
+                "Locked by Admin": [
+                    {
+                        "Bold": true,
+                        "Content": "Unlock the thing"
+                    },
+                    {
+                        "Content": "Fix the computer"
+                    }
+                ]
+            }  ,
+            "Search": {
+                "searchable string": [
+                    {
+                        "Bold": true,
+                        "Content": "pickle"
+                    },
+                    {
+                        "Content": "hello there"
+                    }
+                ]
+            }             
+        }
+    },
+    "Strings": {
+        "Webchat": {
+            "w1": {
+                "Title": "Hello, How can I help?",
+                "Content": "Hello, thank you for contacting the Service Centre, how can I help?"
+            },
+            "w2": {
+                "Title": "Thanks for contacting",
+                "Content": "Thank you for contacting the Service Centre. Byebye"
+            }
+        },
+        "Links": {
+            "l1": {
+                "Title": "Loan Equipment",
+                "Content": "To request Loan IT Equipment, please use the following form http://loanequipmentlink"
+            }
+        }
+    }
+}
