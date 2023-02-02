@@ -475,6 +475,7 @@ foreach ($info_key in $Global:information.Keys)
                 $maincontent_object = $info_tab_data[$ci]
                 $maincontent_bold = $maincontent_object["Bold"]
                 $maincontent_content = $maincontent_object["Content"]
+                $maincontent_isCopyable = $maincontent_object["Copyable"]
                 $maincontent_isLink = $maincontent_object["Link"]
                 $maincontent_hasLinkTitle = $maincontent_object["Title"]
                 if($maincontent_isLink)
@@ -498,6 +499,17 @@ foreach ($info_key in $Global:information.Keys)
                         $main_header.Content = [string]::Format("Copied:{1}{0}", $this.Tooltip, [Environment]::NewLine)
                     })
                     $2_scrollviewer_contentpanel.AddChild($button_copy_link)
+                }
+                elseif($maincontent_isCopyable)
+                {
+                    ### TextBox / Copyable Text ###
+                    $maincontent_textbox = CreateTextBox
+                    $maincontent_textbox.Text = $maincontent_content
+                    $maincontent_textbox.IsReadOnly = 1
+                    $maincontent_textbox.BorderThickness = 0
+                    $maincontent_textbox.Padding = "0 0 0 0"
+                    $maincontent_textbox.Margin = "8 4 8 0"
+                    $2_scrollviewer_contentpanel.AddChild($maincontent_textbox)
                 }
                 else
                 {
