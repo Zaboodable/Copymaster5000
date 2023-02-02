@@ -512,7 +512,7 @@ foreach ($info_key in $Global:information.Keys)
                     else
                     {
                         $maincontent_label.Padding = "0 0 0 0"
-                        $maincontent_label.Margin = "8 0 8 0"
+                        $maincontent_label.Margin = "8 4 8 0"
 
                     }
                     $maincontent_label.Content = $maincontent_content
