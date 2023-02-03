@@ -3,7 +3,7 @@ Add-Type -AssemblyName PresentationFramework
 
 ### Load Data ###
 [System.Collections.Hashtable] $Global:data = [System.Collections.Hashtable]::new()
-$Global:data_path = "$PWD\example-data.json"
+$Global:data_path = "N:\fcs-data\ITSHARED\Copymaster5000\data.json"
 
 # Set icon
 $icon_path = "$PWD\icon.ico"
@@ -76,6 +76,17 @@ function CreateTabItem
     $TabItem = [System.Windows.Controls.TabItem]::new()
     $Global:all_controls.Add($TabItem)
     return $TabItem
+}
+function CreateMenu([string]$title)
+{
+    $Menu = [System.Windows.Controls.Menu]::new()    
+    return $Menu
+}
+function CreateMenuItem([string]$title)
+{
+    $MenuItem = [System.Windows.Controls.MenuItem]::new()    
+    $MenuItem.Header=$title
+    return $MenuItem
 }
 
 
@@ -208,6 +219,7 @@ $main_searchbar_group.Margin = "4 1 4 0"         #margin left top right bottom
 
 $main_searchbar_stack = CreateStackPanel
 $main_searchbar = CreateTextBox
+$main_searchbar.Name = "MainSearch"
 $main_searchbar_label = CreateLabel
 $main_searchbar_stack.Orientation="Horizontal"
 $main_searchbar.MinWidth = 128
@@ -544,12 +556,26 @@ $main_header_border.BorderThickness = 1
 $main_header_border.Margin = "1 1 1 1"
 $main_header_border.AddChild($main_header)
 
+### TOP MENU ###
+$top_menu = CreateMenu
+$menu_actions = CreateMenuItem("Actions")
+$menu_action_refresh = CreateMenuItem("Refresh")
+$top_menu.AddChild($menu_actions)
+$menu_actions.AddChild($menu_action_refresh)
+$menu_action_refresh.Add_Click({
+    $window.Close()
+    .\copymaster.ps1
+})
+
+
 # Dock main window elements
+[System.Windows.Controls.DockPanel]::SetDock($top_menu, [System.Windows.Controls.Dock]::Top)
 [System.Windows.Controls.DockPanel]::SetDock($main_header_border, [System.Windows.Controls.Dock]::Bottom)
 [System.Windows.Controls.DockPanel]::SetDock($main_searchbar_group, [System.Windows.Controls.Dock]::Top)
 [System.Windows.Controls.DockPanel]::SetDock($main_tabs, [System.Windows.Controls.Dock]::Top)
 
 # Add main elements to the window
+$main_dock.AddChild($top_menu)
 $main_dock.AddChild($main_header_border)
 $main_dock.AddChild($main_searchbar_group)
 $main_dock.AddChild($main_tabs)
@@ -571,6 +597,10 @@ foreach($c in $Global:all_controls)
         $c.Foreground = "#000000"   
     }  
 }
+
+### Default focus to search bar
+[System.Windows.Input.FocusManager]::SetFocusedElement($window, $main_searchbar)
+
 #endregion Interface
 
 # Display the window
