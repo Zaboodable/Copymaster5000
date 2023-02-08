@@ -3,7 +3,7 @@ Add-Type -AssemblyName PresentationFramework
 
 ### Load Data ###
 [System.Collections.Hashtable] $Global:data = [System.Collections.Hashtable]::new()
-$Global:data_path = "$PWD\example-data.json"
+$Global:data_path = "N:\fcs-data\ITSHARED\Copymaster5000\data.json"
 
 # Set icon
 $icon_path = "$PWD\icon.ico"
@@ -13,6 +13,11 @@ $Global:all_controls.Capacity = 10240
 
 
 #region Functions
+Function remote_message([string]$ComputerName, [string] $Message)
+{
+    Invoke-WmiMethod -Class win32_process -ComputerName $ComputerName -Name create -ArgumentList  "c:\windows\system32\msg.exe * $Message" 
+}
+
 #region WPF
 
 ### Functions to create generic controls and add to global list
@@ -89,6 +94,57 @@ function CreateMenuItem([string]$title)
     return $MenuItem
 }
 
+
+#region RemoteMessage
+$rwin = [System.Windows.Window]::new()
+$rwin.Title="Remote Messagerino"
+$rwin.Width = 320
+$rwin.Height = 320
+$rwin.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
+
+$rwin_stack = CreateDockPanel
+$rwin.AddChild($rwin_stack)
+
+$rwin_computername_stack = CreateStackPanel
+$rwin_message_stack = CreateStackPanel
+$rwin_computername_stack.Orientation="Horizontal"
+$rwin_computername_stack.HorizontalAlignment="Stretch"
+$rwin_message_stack.Orientation="Horizontal"
+$rwin_message_stack.HorizontalAlignment="Stretch"
+$rwin_submit_button = CreateButton
+$rwin_submit_button.Content = "Send"
+$rwin_submit_button.Add_Click({
+    remote_message $rwin_computername_text.Text $rwin_message_text.Text
+})
+
+$rwin_computername_text = CreateTextBox
+$rwin_computername_text.Width = 200
+$rwin_message_text = CreateTextBox
+$rwin_message_text.Width = 200
+
+$rwin_infolabel = CreateLabel
+$rwin_computername_label = CreateLabel
+$rwin_message_label = CreateLabel
+$rwin_infolabel.Content="Be wary of using this as it causes a popup on the remote machine."
+$rwin_computername_label.Content="Computer Name:"
+$rwin_message_label.Content="Message:"
+
+$rwin_computername_stack.AddChild($rwin_computername_label)
+$rwin_message_stack.AddChild($rwin_message_label)
+$rwin_computername_stack.AddChild($rwin_computername_text)
+$rwin_message_stack.AddChild($rwin_message_text)
+
+$rwin_stack.AddChild($rwin_infolabel)
+$rwin_stack.AddChild($rwin_computername_stack)
+$rwin_stack.AddChild($rwin_message_stack)
+$rwin_stack.AddChild($rwin_submit_button)
+
+
+[System.Windows.Controls.DockPanel]::SetDock($rwin_infolabel, [System.Windows.Controls.Dock]::Top)
+[System.Windows.Controls.DockPanel]::SetDock($rwin_computername_stack, [System.Windows.Controls.Dock]::Top)
+[System.Windows.Controls.DockPanel]::SetDock($rwin_message_stack, [System.Windows.Controls.Dock]::Top)
+[System.Windows.Controls.DockPanel]::SetDock($rwin_submit_button, [System.Windows.Controls.Dock]::Bottom)
+#endregion RemoteMessage
 
 
 
@@ -261,6 +317,7 @@ $main_searchbar.Add_TextChanged({
             continue;
         }
 
+
         if ($c.HasContent)
         {
             $content = $c.Content    # Labels use content for text
@@ -280,6 +337,13 @@ $main_searchbar.Add_TextChanged({
                     if ($tooltip.ToLower().Contains($match))
                     {
                         $isMatch = 1
+                        if ($match -eq "ess")
+                        {
+                            if ($tooltip.ToLower().Contains("ness") -or $tooltip.ToLower().Contains("ress") -or $tooltip.ToLower().Contains("cess") -or $tooltip.ToLower().Contains("sess") -or $tooltip.ToLower().Contains("fess"))
+                            {
+                                $isMatch=0
+                            }
+                        }
                     }
                 }                                
                 if ($header -ne $null)
@@ -287,6 +351,13 @@ $main_searchbar.Add_TextChanged({
                     if ($header.ToLower().Contains($match))
                     {
                         $isMatch = 1
+                        if ($match -eq "ess")
+                        {
+                            if ($header.ToLower().Contains("ness") -or $header.ToLower().Contains("ress") -or $header.ToLower().Contains("cess") -or $header.ToLower().Contains("sess") -or $header.ToLower().Contains("fess"))
+                            {
+                                $isMatch=0
+                            }
+                        }
                     }
                 }
                 if ($content_type -eq "String")
@@ -294,6 +365,13 @@ $main_searchbar.Add_TextChanged({
                     if ($content.ToLower().Contains($match))
                     {
                         $isMatch = 1
+                        if ($match -eq "ess")
+                        {
+                            if ($content.ToLower().Contains("ness") -or $content.ToLower().Contains("ress") -or $content.ToLower().Contains("cess") -or $content.ToLower().Contains("sess") -or $content.ToLower().Contains("fess"))
+                            {
+                                $isMatch=0
+                            }
+                        }
                     }
                 }
 
@@ -560,13 +638,18 @@ $main_header_border.AddChild($main_header)
 $top_menu = CreateMenu
 $menu_actions = CreateMenuItem("Actions")
 $menu_action_refresh = CreateMenuItem("Refresh")
+$menu_action_remotemessage = CreateMenuItem("Remote Message")
 $top_menu.AddChild($menu_actions)
-$menu_actions.AddChild($menu_action_refresh)
 $menu_action_refresh.Add_Click({
     $window.Close()
     .\copymaster.ps1
 })
+$menu_action_remotemessage.Add_Click({
+    $rwin.ShowDialog()
+})
 
+$menu_actions.AddChild($menu_action_refresh)
+$menu_actions.AddChild($menu_action_remotemessage)
 
 # Dock main window elements
 [System.Windows.Controls.DockPanel]::SetDock($top_menu, [System.Windows.Controls.Dock]::Top)
@@ -604,4 +687,5 @@ foreach($c in $Global:all_controls)
 #endregion Interface
 
 # Display the window
+
 $window.ShowDialog()
