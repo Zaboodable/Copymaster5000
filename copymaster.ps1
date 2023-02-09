@@ -18,6 +18,11 @@ Function remote_message([string]$ComputerName, [string] $Message)
     Invoke-WmiMethod -Class win32_process -ComputerName $ComputerName -Name create -ArgumentList  "c:\windows\system32\msg.exe * $Message" 
 }
 
+function append_feedback([string]$content)
+{
+    echo $content >> feedback.txt
+}
+
 #region WPF
 
 ### Functions to create generic controls and add to global list
@@ -145,6 +150,54 @@ $rwin_stack.AddChild($rwin_submit_button)
 [System.Windows.Controls.DockPanel]::SetDock($rwin_message_stack, [System.Windows.Controls.Dock]::Top)
 [System.Windows.Controls.DockPanel]::SetDock($rwin_submit_button, [System.Windows.Controls.Dock]::Bottom)
 #endregion RemoteMessage
+
+#region Feedback
+$fbwin = [System.Windows.Window]::new()
+$fbwin.Title="Feedback"
+$fbwin.Width = 320
+$fbwin.Height = 320
+$fbwin.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
+
+$fbwin_stack = CreateDockPanel
+$fbwin.AddChild($fbwin_stack)
+
+$fbwin_message_stack = CreateStackPanel
+$fbwin_message_stack.Orientation="Horizontal"
+$fbwin_message_stack.HorizontalAlignment="Stretch"
+$fbwin_submit_button = CreateButton
+$fbwin_submit_button.Content = "Send"
+$fbwin_submit_button.Add_Click({
+    $text = $fbwin_message_text.Text
+    if ($text.Length -gt 1)
+    {
+        [string] $name = [Environment]::UserName
+
+
+        [string] $output = [string]::Format("{0}: {1}", $name, $text)
+        append_feedback $output
+    }
+})
+
+$fbwin_message_text = CreateTextBox
+$fbwin_message_text.Width = 200
+
+$fbwin_infolabel = CreateLabel
+$fbwin_message_label = CreateLabel
+$fbwin_infolabel.Content="Send suggestions or feedback"
+$fbwin_message_label.Content="Message:"
+
+$fbwin_message_stack.AddChild($fbwin_message_label)
+$fbwin_message_stack.AddChild($fbwin_message_text)
+
+$fbwin_stack.AddChild($fbwin_infolabel)
+$fbwin_stack.AddChild($fbwin_message_stack)
+$fbwin_stack.AddChild($fbwin_submit_button)
+
+[System.Windows.Controls.DockPanel]::SetDock($fbwin_infolabel, [System.Windows.Controls.Dock]::Top)
+[System.Windows.Controls.DockPanel]::SetDock($fbwin_message_stack, [System.Windows.Controls.Dock]::Top)
+[System.Windows.Controls.DockPanel]::SetDock($fbwin_submit_button, [System.Windows.Controls.Dock]::Bottom)
+#endregion Feedback
+
 
 
 
@@ -639,6 +692,7 @@ $top_menu = CreateMenu
 $menu_actions = CreateMenuItem("Actions")
 $menu_action_refresh = CreateMenuItem("Refresh")
 $menu_action_remotemessage = CreateMenuItem("Remote Message")
+$menu_action_feedback = CreateMenuItem("Send Feedback")
 $top_menu.AddChild($menu_actions)
 $menu_action_refresh.Add_Click({
     $window.Close()
@@ -647,9 +701,14 @@ $menu_action_refresh.Add_Click({
 $menu_action_remotemessage.Add_Click({
     $rwin.ShowDialog()
 })
+$menu_action_feedback.Add_Click({
+    $fbwin.ShowDialog()
+})
+
 
 $menu_actions.AddChild($menu_action_refresh)
 $menu_actions.AddChild($menu_action_remotemessage)
+$menu_actions.AddChild($menu_action_feedback)
 
 # Dock main window elements
 [System.Windows.Controls.DockPanel]::SetDock($top_menu, [System.Windows.Controls.Dock]::Top)
