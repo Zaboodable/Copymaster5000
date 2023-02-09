@@ -16,11 +16,19 @@ $Global:all_controls.Capacity = 10240
 Function remote_message([string]$ComputerName, [string] $Message)
 {
     Invoke-WmiMethod -Class win32_process -ComputerName $ComputerName -Name create -ArgumentList  "c:\windows\system32\msg.exe * $Message" 
+    
+    [string] $name = [Environment]::UserName
+    [string] $date = (Get-Date).DateTime
+    append_log([string]::Format("{0} :: Remote Message from {1} to {2}: {3}{4}",$date, $name, $ComputerName, $Message, [Environment]::NewLine))
 }
 
 function append_feedback([string]$content)
 {
     echo $content >> feedback.txt
+}
+function append_log([string]$content)
+{
+    echo $content >> log.txt
 }
 
 #region WPF
@@ -120,6 +128,9 @@ $rwin_submit_button = CreateButton
 $rwin_submit_button.Content = "Send"
 $rwin_submit_button.Add_Click({
     remote_message $rwin_computername_text.Text $rwin_message_text.Text
+    $rwin_computername_text.Text = ""
+    $rwin_message_text.Text = ""
+    $rwin.Hide()
 })
 
 $rwin_computername_text = CreateTextBox
@@ -171,14 +182,17 @@ $fbwin_submit_button.Add_Click({
     if ($text.Length -gt 1)
     {
         [string] $name = [Environment]::UserName
-
-
-        [string] $output = [string]::Format("{0}: {1}", $name, $text)
+        [string] $date = (Get-Date).DateTime
+        [string] $output = [string]::Format("{0} :: {1}: {2}{3}",$date, $name, $text,[Environment]::NewLine)
         append_feedback $output
+        $box = [System.Windows.MessageBox]::Show("Feedback Submitted", "Success!")
+        $fbwin_message_text.Text=""
+        $fbwin.Hide()
     }
 })
 
 $fbwin_message_text = CreateTextBox
+$fbwin_message_text.AcceptsReturn=1
 $fbwin_message_text.Width = 200
 
 $fbwin_infolabel = CreateLabel
