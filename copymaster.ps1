@@ -1,6 +1,8 @@
 Add-Type -AssemblyName PresentationFramework
 [System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions")
 
+$Global:current_user = [System.Environment]::UserName
+
 ### Load Data ###
 [System.Collections.Hashtable] $Global:data = [System.Collections.Hashtable]::new()
 $Global:data_path = "N:\fcs-data\ITSHARED\Copymaster5000\data.json"
@@ -482,86 +484,6 @@ $main_searchbar.Add_TextChanged({
 ### CREATE TABS ###
 $main_tabs = CreateTabControl
 
-## QUICK COPY TABS [strings.json]##
-#region Strings
-$Global:strings = $Global:data["Strings"]
-
-$tab_main_strings = CreateTabItem
-$tab_main_strings.Header="Quick Copy"
-$tab_strings = CreateTabControl
-$dockpanel_strings = CreateDockPanel
-$dockpanel_strings.AddChild($tab_strings)
-$tab_main_strings.AddChild($dockpanel_strings)
-$main_tabs.AddChild($tab_main_strings)
-
-foreach ($0_key in $Global:strings.Keys)
-{
-    # Create and configure new tab item
-    $0_tabitem = CreateTabItem
-    $0_tabitem.Header = $0_key.ToString()
-    # add tab to panel
-    $tab_strings.AddChild($0_tabitem)
-
-    ## dictionary of content from the json data
-    $1_dictionary = $Global:strings[$0_key]
-
-    # Dock panel for tab content parent
-    $1_dockpanel = CreateDockPanel
-
-    # ScrollViewer to allow scrolling when content extends beyond window
-    $1_scrollviewer = CreateScrollViewer
-    [System.Windows.Controls.DockPanel]::SetDock($1_scrollviewer, [System.Windows.Controls.Dock]::Left)
-    $1_scrollviewer.HorizontalAlignment="Stretch"
-    $1_scrollviewer.VerticalAlignment="Stretch"
-    $1_scrollviewer.HorizontalScrollBarVisibility=[System.Windows.Controls.ScrollBarVisibility]::Visible
-    $1_scrollviewer_contentpanel = CreateStackPanel
-    $1_scrollviewer.AddChild($1_scrollviewer_contentpanel)
-    $1_dockpanel.AddChild($1_scrollviewer)
-
-    ## Loop through each key of the sub-dictionary, these are each individual entries for buttons
-    foreach ($1_key in $1_dictionary.Keys)
-    {
-        # Border for the button
-        $1_border = CreateBorder
-        $1_border.CornerRadius = 2
-        $1_border.BorderBrush = "Black"
-        $1_border.BorderThickness = 2
-        $1_border.Margin = "4 1 4 0"         #margin left top right bottom
-
-        # Data for the button
-        # Title is shown on the button as a quick reference
-        # Copied content is stored in the tooltip
-        $button_data = $1_dictionary[$1_key]
-        $button_title = $button_data["Title"]
-        $button_content = $button_data["Content"]
-
-        # Create and configure the button
-        $button = CreateButton
-        $button.Content = $button_title
-        $button.Padding = "4 4 4 4"
-        $button.Tag = $button_id
-        $button.Tooltip = $button_content    
-        $button.Background = "Transparent"
-
-        # Button click event
-        $button.Add_Click({            
-            # Copy the tooltip data to the clipboard
-            # Update main header for feedback
-            Set-Clipboard -Value $this.Tooltip
-            $main_header.Content = [string]::Format("Copied:{1}{0}", $this.Tooltip, [Environment]::NewLine)
-        })
-        
-        # Add button to border, and add the whole group to the scrollviewer
-        $1_border.AddChild($button)
-        $1_scrollviewer_contentpanel.AddChild($1_border)
-
-    }
-    # Dont forget to add the dockpanel to the tab!
-    $0_tabitem.AddChild($1_dockpanel)
-
-}
-#endregion Strings
-
 #region Systems
 ## For each system in the json file
 ## Create multiple sub-tabs as defined in the file for misc info related to that system
@@ -619,7 +541,7 @@ foreach ($info_key in $Global:information.Keys)
             $2_content_border.CornerRadius = 2
             $2_content_border.BorderBrush = "#708090"
             $2_content_border.BorderThickness = 2
-            $2_content_border.Margin = "1 1 1 1"         #margin left top right bottom
+            $2_content_border.Margin = "2 2 2 2"         #margin left top right bottom
             $2_content_border.AddChild($2_scrollviewer)
 
             $2_tabitem.AddChild($2_dockpanel)
@@ -633,29 +555,29 @@ foreach ($info_key in $Global:information.Keys)
                 $maincontent_bold = $maincontent_object["Bold"]
                 $maincontent_content = $maincontent_object["Content"]
                 $maincontent_isCopyable = $maincontent_object["Copyable"]
-                $maincontent_isLink = $maincontent_object["Link"]
-                $maincontent_hasLinkTitle = $maincontent_object["Title"]
-                if($maincontent_isLink)
+                $maincontent_isButton = $maincontent_object["Button"]
+                $maincontent_hasTitle = $maincontent_object["Title"]
+                if($maincontent_isButton)
                 {
-                    $button_copy_link = CreateButton
-                    $button_copy_link.Content = $maincontent_content
-                    if ($maincontent_hasLinkTitle)
+                    $button_copy = CreateButton
+                    $button_copy.Content = $maincontent_content
+                    if ($maincontent_hasTitle)
                     {
-                        $button_copy_link.Content = $maincontent_hasLinkTitle
+                        $button_copy.Content = $maincontent_hasTitle
                     }
-                    $button_copy_link.Margin = "8 4 8 4"
-                    $button_copy_link.Tag = $button_id
-                    $button_copy_link.Tooltip = $maincontent_content    
-                    $button_copy_link.Background = "Transparent"
+                    $button_copy.Margin = "8 2 8 2"
+                    $button_copy.Tag = $button_id
+                    $button_copy.Tooltip = $maincontent_content    
+                    $button_copy.Background = "Transparent"
 
                     # Button click event
-                    $button_copy_link.Add_Click({            
+                    $button_copy.Add_Click({            
                         # Copy the tooltip data to the clipboard
                         # Update main header for feedback
                         Set-Clipboard -Value $this.Tooltip
                         $main_header.Content = [string]::Format("Copied:{1}{0}", $this.Tooltip, [Environment]::NewLine)
                     })
-                    $2_scrollviewer_contentpanel.AddChild($button_copy_link)
+                    $2_scrollviewer_contentpanel.AddChild($button_copy)
                 }
                 elseif($maincontent_isCopyable)
                 {
