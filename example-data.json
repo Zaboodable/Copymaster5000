@@ -1,5 +1,21 @@
 {
     "Information": {
+        "Quick Copy":{
+            "Webchat": {
+                "Main":[
+                    {
+                        "Button":true,
+                        "Title": "Hello, How can I help?",
+                        "Content": "Hello, thank you for contacting the Service Centre, how can I help?"
+                    }, 
+                    {
+                        "Button":true,
+                        "Title": "Anything else I can help with?",
+                        "Content": "Is there anything else I can help you with today?"
+                    }
+                ]
+            }
+        },
         "Systems": {
             "System Example": {
                 "Info": [
@@ -99,24 +115,6 @@
                     }
                 ]
             }             
-        }
-    },
-    "Strings": {
-        "Webchat": {
-            "w1": {
-                "Title": "Hello, How can I help?",
-                "Content": "Hello, thank you for contacting the Service Centre, how can I help?"
-            },
-            "w2": {
-                "Title": "Thanks for contacting",
-                "Content": "Thank you for contacting the Service Centre. Byebye"
-            }
-        },
-        "Links": {
-            "l1": {
-                "Title": "Loan Equipment",
-                "Content": "To request Loan IT Equipment, please use the following form http://loanequipmentlink"
-            }
         }
     }
 }
