@@ -1,5 +1,8 @@
+## TODO - clean up a bit
+
 Add-Type -AssemblyName PresentationFramework
-[System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions")
+[System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions") 
+Add-Type -AssemblyName System.Web
 
 $Global:current_user = [System.Environment]::UserName
 
@@ -70,6 +73,7 @@ function CreateScrollViewer
 function CreateTextBox
 {
     $TextBox = [System.Windows.Controls.TextBox]::new()
+    #$TextBox = [System.Windows.Controls.RichTextBox]::new()
     $Global:all_controls.Add($TextBox)
     return $TextBox
 }
@@ -108,7 +112,38 @@ function CreateMenuItem([string]$title)
     $MenuItem.Header=$title
     return $MenuItem
 }
+function CreateCheckBox([string]$label, $checked)
+{
+    $CheckBox = [System.Windows.Controls.CheckBox]::new()
+    $CheckBox.Content = $label
+    $CheckBox.IsChecked = $checked
 
+
+    return $CheckBox
+}
+function CreateImage([string]$path, [bool]$use_border)
+{
+    $Image = [System.Windows.Controls.Image]::new()
+    $path = [string]::Format("{0}{1}","$PWD",$path)
+    $bmp = [System.Windows.Media.Imaging.BitmapImage]::new()
+    $bmp.BeginInit()
+    $bmp.UriSource = $path
+    $bmp.EndInit()
+    $Image.Source = $bmp
+    if ($use_border)
+    {
+        $Border = CreateBorder
+        $Border.CornerRadius = 2
+        $Border.BorderBrush = "Black"
+        $Border.BorderThickness = 2
+        $Border.Margin = "8"   
+        $Border.AddChild($Image)
+        return $Border
+    }
+    $Image.Margin = "8"
+
+    return $Image
+}
 
 #region RemoteMessage
 $rwin = [System.Windows.Window]::new()
@@ -208,13 +243,48 @@ $fbwin_message_stack.AddChild($fbwin_message_text)
 $fbwin_stack.AddChild($fbwin_infolabel)
 $fbwin_stack.AddChild($fbwin_message_stack)
 $fbwin_stack.AddChild($fbwin_submit_button)
+$fbwin_TEST = [System.Windows.Controls.RichTextBox]::new();
+$fbwin_stack.AddChild($fbwin_TEST)
 
 [System.Windows.Controls.DockPanel]::SetDock($fbwin_infolabel, [System.Windows.Controls.Dock]::Top)
 [System.Windows.Controls.DockPanel]::SetDock($fbwin_message_stack, [System.Windows.Controls.Dock]::Top)
 [System.Windows.Controls.DockPanel]::SetDock($fbwin_submit_button, [System.Windows.Controls.Dock]::Bottom)
 #endregion Feedback
 
+#region PasswordGen
+$pwwin = [System.Windows.Window]::new()
+$pwwin.Title="Passwordinator 7000"
+$pwwin.Width = 320
+$pwwin.Height = 320
+$pwwin.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
 
+$pwwin_stack = CreateDockPanel
+$pwwin.AddChild($pwwin_stack)
+
+
+$pwwin_infolabel = CreateLabel
+$pwwin_infolabel.Content="Create a new random password"
+
+
+$pwin_message_text = CreateTextBox
+$pwin_message_text.VerticalAlignment = [System.Windows.VerticalAlignment]::Top
+
+$pwwin_generate_button = CreateButton
+$pwwin_generate_button.Content = "Generate"
+$pwwin_generate_button.VerticalAlignment = [System.Windows.VerticalAlignment]::Top
+$pwwin_generate_button.Add_Click({
+    $pw = [System.Web.Security.Membership]::GeneratePassword(12, 2)
+    $pw = $pw.replace('£', '$')
+    $pwin_message_text.Text = $pw
+})
+
+
+$pwwin_stack.AddChild($pwwin_infolabel)
+$pwwin_stack.AddChild($pwwin_generate_button)
+$pwwin_stack.AddChild($pwin_message_text)
+
+[System.Windows.Controls.DockPanel]::SetDock($pwwin_infolabel, [System.Windows.Controls.Dock]::Top)
+#endregion PasswordGen
 
 
 #endregion WPF
@@ -320,8 +390,8 @@ function HSLtoHEX($values)
 #region Interface
 [System.Windows.Window] $window = CreateWindow "CopyMaster 5000"
 $window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
-$window.Width = 800
-$window.Height = 512
+$window.Width = 896
+$window.Height = 768
 $window.Icon = $icon_path
 $window.Add_LostKeyboardFocus({
     $main_header.Content=""
@@ -334,7 +404,11 @@ $main_dock.Background = "#dddddd"
 LoadData
 
 
-### Search Bar ###
+
+#region TopBars
+## Search Bar
+$main_topbars_dock = CreateDockPanel
+
 $main_searchbar_group = CreateBorder
 $main_searchbar_group.CornerRadius = 2
 $main_searchbar_group.BorderBrush = "Black"
@@ -343,18 +417,227 @@ $main_searchbar_group.Margin = "4 1 4 0"         #margin left top right bottom
 
 
 $main_searchbar_stack = CreateStackPanel
+$main_searchbar_group.MaxHeight = 28
+$main_searchbar_stack.MaxHeight = 28
 $main_searchbar = CreateTextBox
-$main_searchbar.Name = "MainSearch"
+$main_searchbar.Height = 20
+$main_searchbar.VerticalAlignment = [System.Windows.VerticalAlignment]::Top
 $main_searchbar_label = CreateLabel
 $main_searchbar_stack.Orientation="Horizontal"
 $main_searchbar.MinWidth = 128
 $main_searchbar.Margin = "2 2 2 2"
-$main_searchbar_label.Margin = "2 2 2 2" 
+$main_searchbar_label.Margin = "1 1 1 1"
+$main_searchbar_label.Padding = "3 3 1 0" 
 $main_searchbar_label.Content="Search: "
+
 $main_searchbar_stack.AddChild($main_searchbar_label)
 $main_searchbar_stack.AddChild($main_searchbar)
 $main_searchbar_group.AddChild($main_searchbar_stack)
 
+
+$main_accountbar_group = CreateBorder
+$main_accountbar_group.Tooltip="Default password to put in copied text with a password"
+$main_accountbar_group.CornerRadius = 2
+$main_accountbar_group.BorderBrush = "Black"
+$main_accountbar_group.BorderThickness = 2
+$main_accountbar_group.Margin = "4 1 4 0"         #margin left top right bottom
+
+$main_accountbar_stack = CreateStackPanel
+$main_accountbar_group.AddChild($main_accountbar_stack)
+
+#region PasswordBar
+## Password Bar ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- Password Bar
+$main_passwordbar = CreateTextBox
+$main_passwordbar.AcceptsReturn=0
+$main_passwordbar.Height = 20
+$main_passwordbar_label = CreateLabel
+$main_passwordbar_label_current = CreateLabel
+$main_passwordbar.MinWidth = 128
+$main_passwordbar.MaxWidth = 188
+$main_passwordbar.MaxLength=32
+$main_passwordbar.Margin = "2 2 2 2"
+$main_passwordbar_label.Margin = "2 2 2 2" 
+$main_passwordbar_label.Content="Default Password: "
+$main_passwordbar_label_current.Margin = "2 2 2 2" 
+$Global:default_password="Sprinter23"
+$main_passwordbar.Text = $Global:default_password
+
+
+$main_passwordbar_stack = CreateStackPanel
+$main_passwordbar_stack.Orientation="Horizontal"
+$main_passwordbar_stack.HorizontalAlignment="Stretch"
+$main_passwordbar_stack.AddChild($main_passwordbar_label)
+$main_passwordbar_stack.AddChild($main_passwordbar)
+$main_passwordbar_stack.AddChild($main_passwordbar_label_current)
+$main_accountbar_stack.AddChild($main_passwordbar_stack)
+
+## craigs password button
+$main_passwordbar_genericreset_button = CreateButton
+$main_passwordbar_stack.AddChild($main_passwordbar_genericreset_button)
+$main_passwordbar_genericreset_button.HorizontalAlignment="Right"
+$main_passwordbar_genericreset_button.Content = "Craigs Generic Password Response"
+$main_passwordbar_genericreset_button.Padding = "2 2 2 2"
+$main_passwordbar_genericreset_button.Margin = "2 2 2 2"
+$main_passwordbar_genericreset_button.Add_Click({
+[string] $clipboard_text = @"
+We have reset your password for the requested system.
+
+Your new password is: %DEFAULT_PASSWORD%
+You will be prompted to change this on your next login.
+
+If you have any further issues, please get in touch on webchat on the Get IT Help pages on the Intranet or your issue is urgent and you require an urgent response, please contact us via 01609 532020 option 3, option 2. You may experience a delay as our phone lines are very busy at the moment, please bear with us and we will connect as soon as we can.
+
+Many thanks,
+T&C Service Desk"
+"@
+    if ($clipboard_text.Contains("%DEFAULT_PASSWORD%"))
+    {
+        $clipboard_text = $clipboard_text.Replace("%DEFAULT_PASSWORD%", $Global:default_password)
+    }
+    Set-Clipboard -Value $clipboard_text
+    $main_header.Content = [string]::Format("Copied:{1}{0}", $clipboard_text, [Environment]::NewLine)
+})
+
+
+
+$main_passwordbar_label_current.Content=[string]::format("Current: {0}", $Global:default_password)
+
+$main_passwordbar.Add_TextChanged({
+    if ($this.Text.Length -gt 0)
+    {        
+        [string]$pw = $this.Text
+        $Global:default_password=$pw
+        $main_passwordbar_label_current.Content=[string]::format("Current: {0}", $Global:default_password)
+    }
+})
+## Password Bar -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- Password Bar end
+#endregion PasswordBar
+
+#region EmployeeBar
+## Employee Number Bar ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- Employee Number Bar
+$main_employeenumberbar = CreateTextBox
+$main_employeenumberbar.AcceptsReturn=0
+$main_employeenumberbar.Height = 20
+$main_employeenumberbar_label = CreateLabel
+$main_employeenumberbar_label_current = CreateLabel
+$main_employeenumberbar.MinWidth = 128
+$main_employeenumberbar.MaxWidth = 188
+$main_employeenumberbar.MaxLength=10
+$main_employeenumberbar.Margin = "2 2 2 2"
+$main_employeenumberbar_label.Margin = "2 2 2 2" 
+$main_employeenumberbar_label.Content="Employee Number: "
+$main_employeenumberbar_label_current.Margin = "2 2 2 2" 
+$Global:default_employeenumber="HARR123456"
+$main_employeenumberbar.Text = $Global:default_employeenumber
+
+$main_employeenumberbar_stack = CreateStackPanel
+$main_employeenumberbar_stack.Orientation="Horizontal"
+$main_employeenumberbar_stack.HorizontalAlignment="Stretch"
+$main_employeenumberbar_stack.AddChild($main_employeenumberbar_label)
+$main_employeenumberbar_stack.AddChild($main_employeenumberbar)
+$main_employeenumberbar_stack.AddChild($main_employeenumberbar_label_current)
+$main_accountbar_stack.AddChild($main_employeenumberbar_stack)
+
+
+$main_employeenumberbar_label_current.Content=[string]::format("Current: {0}", $Global:default_employeenumber)
+
+$main_employeenumberbar.Add_TextChanged({
+    if ($this.Text.Length -gt 0)
+    {        
+        [string]$pw = $this.Text
+        $Global:default_employeenumber=$pw
+        $main_employeenumberbar_label_current.Content=[string]::format("Current: {0}", $Global:default_employeenumber)
+    }
+})
+
+
+## alecs myview button
+$main_employeenumberbar_genericreset_button = CreateButton
+$main_employeenumberbar_stack.AddChild($main_employeenumberbar_genericreset_button)
+$main_employeenumberbar_genericreset_button.HorizontalAlignment="Right"
+$main_employeenumberbar_genericreset_button.Content = "MyView Password Email"
+$main_employeenumberbar_genericreset_button.Padding = "2 2 2 2"
+$main_employeenumberbar_genericreset_button.Margin = "2 2 2 2"
+$main_employeenumberbar_genericreset_button.Add_Click({
+[string] $clipboard_text = @"
+Thank you for those details.
+    I have reset the password for %DEFAULT_EMPLOYEE% to: %DEFAULT_PASSWORD%
+    Please go to Self Service - MyView Dashboard ( https://selfservice.northyorks.gov.uk ) and follow these steps:
+    
+    1.            Input employee number and password %DEFAULT_PASSWORD%, click sign in
+    2.            Now input your DOB in the full format e.g. 24/10/2018
+    3.            On the next page it will ask for a pin, this is where you can enter a new one now the password has been reset.
+    4.            On the next page it will ask to change your password, your current password is %DEFAULT_PASSWORD%. There are instructions on top of this page that tell you what values your new password should have.
+    5.            You should now be logged in.
+    
+    Please Note: This temporary password will expire after 24 hours.
+    
+Many thanks,
+T&C Service Desk
+"@
+    if ($clipboard_text.Contains("%DEFAULT_PASSWORD%"))
+    {
+        $clipboard_text = $clipboard_text.Replace("%DEFAULT_PASSWORD%", $Global:default_password)
+    }    
+    if ($clipboard_text.Contains("%DEFAULT_EMPLOYEE%"))
+    {
+        $clipboard_text = $clipboard_text.Replace("%DEFAULT_EMPLOYEE%", $Global:default_employeenumber)
+    }
+    Set-Clipboard -Value $clipboard_text
+    $main_header.Content = [string]::Format("Copied:{1}{0}", $clipboard_text, [Environment]::NewLine)
+})
+
+
+
+$main_passwordbar_label_current.Content=[string]::format("Current: {0}", $Global:default_password)
+
+$main_passwordbar.Add_TextChanged({
+    if ($this.Text.Length -gt 0)
+    {        
+        [string]$pw = $this.Text
+        $Global:default_password=$pw
+        $main_passwordbar_label_current.Content=[string]::format("Current: {0}", $Global:default_password)
+    }
+})
+
+## Employee Number Bar -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- Employee Number Bar end
+#endregion EmployeeBar
+
+
+#region AccountBarConfig
+## Account Bar Check boxes---------------------------------------------------------------------------------------------------------------------------------------------------------------------- Account Bar Check boxes
+$main_topbars_account_border = CreateBorder
+$main_topbars_account_border.BorderThickness=1
+$main_topbars_account_border.CornerRadius=2
+$main_topbars_account_border.BorderBrush="Black"
+$main_topbars_account_scroll_stack = CreateStackPanel
+$main_topbars_account_border.AddChild($main_topbars_account_scroll_stack)
+
+# employee number / my view
+$main_topbars_account_check_employeenumber = CreateCheckBox "MyView" 0
+$main_topbars_account_check_employeenumber.Margin = "2 2 2 2"
+$main_topbars_account_check_employeenumber.Add_Unchecked({
+    $main_passwordbar_genericreset_button.Visibility= [System.Windows.Visibility]::Visible
+    $main_employeenumberbar_stack.Visibility = [System.Windows.Visibility]::Hidden
+    $main_topbars_dock.MaxHeight = 36
+})
+$main_topbars_account_check_employeenumber.Add_Checked({
+    $main_passwordbar_genericreset_button.Visibility= [System.Windows.Visibility]::Hidden
+    $main_employeenumberbar_stack.Visibility = [System.Windows.Visibility]::Visible
+    $main_topbars_dock.MaxHeight = 72
+})
+
+
+#$main_topbars_account_scroll_stack.AddChild($main_topbars_account_check_password)
+$main_topbars_account_scroll_stack.AddChild($main_topbars_account_check_employeenumber)
+## Account Bar Check boxes---------------------------------------------------------------------------------------------------------------------------------------------------------------------- Account Bar Check boxes end
+#endregion AccountBarConfig
+
+$main_topbars_dock.AddChild($main_searchbar_group)
+$main_topbars_dock.AddChild($main_accountbar_group)
+$main_topbars_dock.AddChild($main_topbars_account_border)
+$main_topbars_dock.MaxHeight = 36
+$main_topbars_dock.VerticalAlignment=[System.Windows.VerticalAlignment]::Top
 
 $Global:control_colours = @{}                   # Default Colours          # Searched Colours
 $Global:control_colours.Add("TextBox",          @(@("#ffffff", "#000000"), @("#ffffff", "#000000")));
@@ -480,6 +763,7 @@ $main_searchbar.Add_TextChanged({
     }
 }) # end of searchbar text event
 
+#endregion TopBars
 
 ### CREATE TABS ###
 $main_tabs = CreateTabControl
@@ -534,6 +818,7 @@ foreach ($info_key in $Global:information.Keys)
             $2_scrollviewer.VerticalAlignment="Stretch"
             $2_scrollviewer_contentpanel = CreateStackPanel
             $2_scrollviewer.AddChild($2_scrollviewer_contentpanel)
+            $2_scrollviewer.Padding="0 4 0 0"
         
             $2_dockpanel = CreateDockPanel
 
@@ -553,11 +838,23 @@ foreach ($info_key in $Global:information.Keys)
             {
                 $maincontent_object = $info_tab_data[$ci]
                 $maincontent_bold = $maincontent_object["Bold"]
+                $maincontent_hasTitle = $maincontent_object["Title"]
                 $maincontent_content = $maincontent_object["Content"]
                 $maincontent_isCopyable = $maincontent_object["Copyable"]
                 $maincontent_isButton = $maincontent_object["Button"]
-                $maincontent_hasTitle = $maincontent_object["Title"]
-                if($maincontent_isButton)
+
+                # image
+                $maincontent_isImage = $maincontent_object["Image"]
+                $maincontent_hasPath = $maincontent_object["Path"]
+                if($maincontent_isImage)
+                {
+                    if($maincontent_hasPath)
+                    {
+                    $image = CreateImage $maincontent_hasPath 1
+                    $2_scrollviewer_contentpanel.AddChild($image)
+                    }
+                }
+                elseif($maincontent_isButton)
                 {
                     $button_copy = CreateButton
                     $button_copy.Content = $maincontent_content
@@ -574,8 +871,44 @@ foreach ($info_key in $Global:information.Keys)
                     $button_copy.Add_Click({            
                         # Copy the tooltip data to the clipboard
                         # Update main header for feedback
-                        Set-Clipboard -Value $this.Tooltip
-                        $main_header.Content = [string]::Format("Copied:{1}{0}", $this.Tooltip, [Environment]::NewLine)
+                        [string]$clipboard_text = $this.Tooltip
+
+                        #region TODO_MOVE
+
+                        # Autofill date for +48h CCP response
+                        if ($clipboard_text.Contains("DD/MM/YYYY"))
+                        {
+                            $date = (Get-Date).AddDays(2)
+                            $dayofweek = $date.DayOfWeek
+                            if ($dayofweek -eq "Saturday")
+                            {
+                                $date = $date.AddDays(2)
+                            }
+                            if ($dayofweek -eq "Sunday")
+                            {
+                                $date = $date.AddDays(1)
+                            }
+                            $day = $date.Day
+                            $month = $date.Month
+                            $year = $date.Year
+                            $ddmmyyyy = [string]::format("{0}/{1}/{2}", $day, $month, $year)
+                            $clipboard_text = $clipboard_text.Replace("DD/MM/YYYY", $ddmmyyyy)
+                        }
+
+                        # Replace password with default in copied text
+                        if ($clipboard_text.Contains("%DEFAULT_PASSWORD%"))
+                        {
+                            $clipboard_text = $clipboard_text.Replace("%DEFAULT_PASSWORD%", $Global:default_password)
+                        }
+                        if ($clipboard_text.Contains("%DEFAULT_EMPLOYEE%"))
+                        {
+                            $clipboard_text = $clipboard_text.Replace("%DEFAULT_EMPLOYEE%", $Global:default_employeenumber)
+                        }
+                        #endregion TODO_MOVE
+
+
+                        Set-Clipboard -Value $clipboard_text
+                        $main_header.Content = [string]::Format("Copied:{1}{0}", $clipboard_text, [Environment]::NewLine)
                     })
                     $2_scrollviewer_contentpanel.AddChild($button_copy)
                 }
@@ -629,6 +962,7 @@ $menu_actions = CreateMenuItem("Actions")
 $menu_action_refresh = CreateMenuItem("Refresh")
 $menu_action_remotemessage = CreateMenuItem("Remote Message")
 $menu_action_feedback = CreateMenuItem("Send Feedback")
+$menu_action_password = CreateMenuItem("Generate Password")
 $top_menu.AddChild($menu_actions)
 $menu_action_refresh.Add_Click({
     $window.Close()
@@ -640,24 +974,44 @@ $menu_action_remotemessage.Add_Click({
 $menu_action_feedback.Add_Click({
     $fbwin.ShowDialog()
 })
+$menu_action_password.Add_Click({
+    $pwwin.ShowDialog()
+})
 
 
 $menu_actions.AddChild($menu_action_refresh)
 $menu_actions.AddChild($menu_action_remotemessage)
 $menu_actions.AddChild($menu_action_feedback)
+$menu_actions.AddChild($menu_action_password)
 
 # Dock main window elements
 [System.Windows.Controls.DockPanel]::SetDock($top_menu, [System.Windows.Controls.Dock]::Top)
 [System.Windows.Controls.DockPanel]::SetDock($main_header_border, [System.Windows.Controls.Dock]::Bottom)
-[System.Windows.Controls.DockPanel]::SetDock($main_searchbar_group, [System.Windows.Controls.Dock]::Top)
+[System.Windows.Controls.DockPanel]::SetDock($main_topbars_dock, [System.Windows.Controls.Dock]::Top)
 [System.Windows.Controls.DockPanel]::SetDock($main_tabs, [System.Windows.Controls.Dock]::Top)
 
 # Add main elements to the window
 $main_dock.AddChild($top_menu)
 $main_dock.AddChild($main_header_border)
-$main_dock.AddChild($main_searchbar_group)
+$main_dock.AddChild($main_topbars_dock)
 $main_dock.AddChild($main_tabs)
-$window.AddChild($main_dock)
+
+$main_side_dock = CreateDockPanel
+$main_main_dock = CreateDockPanel
+$main_main_dock.AddChild($main_dock)
+[System.Windows.Controls.DockPanel]::SetDock($main_dock, [System.Windows.Controls.Dock]::Left)
+
+# TODO - add the side panel for search results
+#$main_main_dock.AddChild($main_side_dock)
+#[System.Windows.Controls.DockPanel]::SetDock($main_side_dock, [System.Windows.Controls.Dock]::Right)
+#$main_side_dock_stack = CreateStackPanel
+#$main_side_dock_stack.Width = 128
+#$main_side_dock.AddChild($main_side_dock_stack)
+#$main_side_dock_button = CreateButton
+#$main_side_dock_button.Content = "test button"
+#$main_side_dock_stack.AddChild($main_side_dock_button)
+
+$window.AddChild($main_main_dock)
 
 ### Set all colours
 foreach($c in $Global:all_controls)
