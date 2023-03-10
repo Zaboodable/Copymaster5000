@@ -1,10 +1,19 @@
 ## TODO - clean up a bit
 
+
+#region include
 Add-Type -AssemblyName PresentationFramework
 [System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions") 
 Add-Type -AssemblyName System.Web
+#endregion include
 
 $Global:current_user = [System.Environment]::UserName
+$Global:alphabet = @('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')
+$Global:alphabet_caps = @('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z')
+
+# local user data
+$user = $env:USERNAME
+echo "Current user: $user"
 
 ### Load Data ###
 [System.Collections.Hashtable] $Global:data = [System.Collections.Hashtable]::new()
@@ -18,13 +27,102 @@ $Global:all_controls.Capacity = 10240
 
 
 #region Functions
+# https://den.dev/blog/powershell-windows-notification/
+function Show-Notification {
+    [cmdletbinding()]
+    Param (
+        [string]
+        $ToastTitle,
+        [string]
+        [parameter(ValueFromPipeline)]
+        $ToastText
+    )
+
+    [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null
+    $Template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+
+    $RawXml = [xml] $Template.GetXml()
+    ($RawXml.toast.visual.binding.text|where {$_.id -eq "1"}).AppendChild($RawXml.CreateTextNode($ToastTitle)) > $null
+    ($RawXml.toast.visual.binding.text|where {$_.id -eq "2"}).AppendChild($RawXml.CreateTextNode($ToastText)) > $null
+
+    $SerializedXml = New-Object Windows.Data.Xml.Dom.XmlDocument
+    $SerializedXml.LoadXml($RawXml.OuterXml)
+
+    $Toast = [Windows.UI.Notifications.ToastNotification]::new($SerializedXml)
+    $Toast.Tag = "PowerShell"
+    $Toast.Group = "PowerShell"
+    $Toast.ExpirationTime = [DateTimeOffset]::Now.AddMinutes(1)
+
+    $Notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("PowerShell")
+    $Notifier.Show($Toast);
+}
+
+function notify([string]$ComputerName, [string] $Title, [string] $Message)
+{
+    $cred = Get-Credential -UserName $user -Message "Please validate your credentials"
+    Invoke-Command -ComputerName $ComputerName -Credential $cred  -ArgumentList $Title,$Message -ScriptBlock {
+        param($t=$Title, $m=$Message)
+        function Show-Notification {
+            [cmdletbinding()]
+            Param (
+                [string]
+                $ToastTitle,
+                [string]
+                [parameter(ValueFromPipeline)]
+                $ToastText
+            )
+
+            [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null
+            $Template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+
+            $RawXml = [xml] $Template.GetXml()
+            ($RawXml.toast.visual.binding.text|where {$_.id -eq "1"}).AppendChild($RawXml.CreateTextNode($ToastTitle)) > $null
+            ($RawXml.toast.visual.binding.text|where {$_.id -eq "2"}).AppendChild($RawXml.CreateTextNode($ToastText)) > $null
+
+            $SerializedXml = New-Object Windows.Data.Xml.Dom.XmlDocument
+            $SerializedXml.LoadXml($RawXml.OuterXml)
+
+            $Toast = [Windows.UI.Notifications.ToastNotification]::new($SerializedXml)
+            $Toast.Tag = "PowerShell"
+            $Toast.Group = "PowerShell"
+            $Toast.ExpirationTime = [DateTimeOffset]::Now.AddMinutes(1)
+
+            $Notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("PowerShell")
+            $Notifier.Show($Toast);
+        }
+        Show-Notification $t $m
+    }
+}
+
+# send a popup message to machine
 Function remote_message([string]$ComputerName, [string] $Message)
 {
+    if ($ComputerName.Contains("NY"))
+    {
+        $ComputerName = $ComputerName
+    } 
+    else
+    {
+        $ComputerName = [string]::Format("NY{0}", $ComputerName)
+    }
     Invoke-WmiMethod -Class win32_process -ComputerName $ComputerName -Name create -ArgumentList  "c:\windows\system32\msg.exe * $Message" 
     
     [string] $name = [Environment]::UserName
     [string] $date = (Get-Date).DateTime
     append_log([string]::Format("{0} :: Remote Message from {1} to {2}: {3}{4}",$date, $name, $ComputerName, $Message, [Environment]::NewLine))
+}
+
+# connect to remote machine with sccm
+function remote_session([string]$ComputerName)
+{
+    if ($ComputerName.Contains("NY"))
+    {
+        $ComputerName = $ComputerName
+    } 
+    else
+    {
+        $ComputerName = [string]::Format("NY{0}", $ComputerName)
+    }    & 'C:\Program Files\SCCM2012Remote\CmRcViewer.exe' $ComputerName
 }
 
 function append_feedback([string]$content)
@@ -129,6 +227,8 @@ function CreateImage([string]$path, [bool]$use_border)
     $bmp.BeginInit()
     $bmp.UriSource = $path
     $bmp.EndInit()
+    $image.Width = $bmp.PixelWidth
+    $image.Height = $bmp.PixelHeight
     $Image.Source = $bmp
     if ($use_border)
     {
@@ -144,6 +244,11 @@ function CreateImage([string]$path, [bool]$use_border)
 
     return $Image
 }
+
+
+
+
+
 
 #region RemoteMessage
 $rwin = [System.Windows.Window]::new()
@@ -198,6 +303,123 @@ $rwin_stack.AddChild($rwin_submit_button)
 [System.Windows.Controls.DockPanel]::SetDock($rwin_message_stack, [System.Windows.Controls.Dock]::Top)
 [System.Windows.Controls.DockPanel]::SetDock($rwin_submit_button, [System.Windows.Controls.Dock]::Bottom)
 #endregion RemoteMessage
+
+#region remote_notify
+$rwin_notify = [System.Windows.Window]::new()
+$rwin_notify.Title="Notificationator 9000"
+$rwin_notify.Width = 320
+$rwin_notify.Height = 320
+$rwin_notify.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
+
+$rwin_notify_stack = CreateDockPanel
+$rwin_notify.AddChild($rwin_notify_stack)
+
+$rwin_notify_computername_stack = CreateStackPanel
+$rwin_notify_title_stack = CreateStackPanel
+$rwin_notify_message_stack = CreateStackPanel
+$rwin_notify_computername_stack.Orientation="Horizontal"
+$rwin_notify_computername_stack.HorizontalAlignment="Stretch"
+$rwin_notify_title_stack.Orientation="Horizontal"
+$rwin_notify_title_stack.HorizontalAlignment="Stretch"
+$rwin_notify_message_stack.Orientation="Horizontal"
+$rwin_notify_message_stack.HorizontalAlignment="Stretch"
+$rwin_notify_submit_button = CreateButton
+$rwin_notify_submit_button.Content = "Send"
+$rwin_notify_submit_button.Add_Click({
+    notify $rwin_notify_computername_text.Text $rwin_notify_title_text.Text $rwin_notify_message_text.Text
+    $rwin_notify_computername_text.Text = ""
+    $rwin_notify_title_text.Text = ""
+    $rwin_notify_message_text.Text = ""
+    $rwin_notify.Hide()
+})
+
+$rwin_notify_computername_text = CreateTextBox
+$rwin_notify_computername_text.Width = 200
+$rwin_notify_title_text = CreateTextBox
+$rwin_notify_title_text.Width = 200
+$rwin_notify_title_text.Text="Title Content"
+$rwin_notify_message_text = CreateTextBox
+$rwin_notify_message_text.Width = 200
+$rwin_notify_message_text.Text="Message Content"
+
+
+
+$rwin_notify_infolabel = CreateLabel
+$rwin_notify_computername_label = CreateLabel
+$rwin_notify_title_label = CreateLabel
+$rwin_notify_message_label = CreateLabel
+$rwin_notify_infolabel.Content="Be wary of using this as it causes a popup on the remote machine."
+$rwin_notify_computername_label.Content="Computer Name:"
+$rwin_notify_title_label.Content="Title:"
+$rwin_notify_message_label.Content="Message:"
+
+$rwin_notify_computername_stack.AddChild($rwin_notify_computername_label)
+$rwin_notify_computername_stack.AddChild($rwin_notify_computername_text)
+$rwin_notify_title_stack.AddChild($rwin_notify_title_label)
+$rwin_notify_title_stack.AddChild($rwin_notify_title_text)
+$rwin_notify_message_stack.AddChild($rwin_notify_message_label)
+$rwin_notify_message_stack.AddChild($rwin_notify_message_text)
+
+$rwin_notify_stack.AddChild($rwin_notify_infolabel)
+$rwin_notify_stack.AddChild($rwin_notify_computername_stack)
+$rwin_notify_stack.AddChild($rwin_notify_title_stack)
+$rwin_notify_stack.AddChild($rwin_notify_message_stack)
+$rwin_notify_stack.AddChild($rwin_notify_submit_button)
+
+
+[System.Windows.Controls.DockPanel]::SetDock($rwin_notify_infolabel, [System.Windows.Controls.Dock]::Top)
+[System.Windows.Controls.DockPanel]::SetDock($rwin_notify_computername_stack, [System.Windows.Controls.Dock]::Top)
+[System.Windows.Controls.DockPanel]::SetDock($rwin_notify_title_stack, [System.Windows.Controls.Dock]::Top)
+[System.Windows.Controls.DockPanel]::SetDock($rwin_notify_message_stack, [System.Windows.Controls.Dock]::Top)
+[System.Windows.Controls.DockPanel]::SetDock($rwin_notify_submit_button, [System.Windows.Controls.Dock]::Bottom)
+#endregion remote_notify
+
+#region RemoteDesktopSession
+$rdesk_win = [System.Windows.Window]::new()
+$rdesk_win.Title="RemoteMaster2000"
+$rdesk_win.Width = 320
+$rdesk_win.Height = 120
+$rdesk_win.Icon = "$PWD\icon_rdp.ico"
+$rdesk_win.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
+
+$rdesk_win_dock = CreateDockPanel
+$rdesk_win_dock.LastChildFill = 0
+$rdesk_win.AddChild($rdesk_win_dock)
+
+$rdesk_win_computername_stack = CreateStackPanel
+$rdesk_win_computername_stack.Orientation="Horizontal"
+$rdesk_win_computername_stack.HorizontalAlignment="Stretch"
+$rdesk_win_submit_button = CreateButton
+$rdesk_win_submit_button.Margin = "4"
+$rdesk_win_submit_button.Content = "Connect"
+$rdesk_win_submit_button.Add_Click({
+    remote_session $rdesk_win_computername_text.Text
+    $rdesk_win.Hide()
+})
+
+$rdesk_win_computername_text = CreateTextBox
+$rdesk_win_computername_text.Width = 200
+$rdesk_win_message_text = CreateTextBox
+$rdesk_win_message_text.Width = 200
+
+$rdesk_win_infolabel = CreateLabel
+$rdesk_win_computername_label = CreateLabel
+$rdesk_win_infolabel.Content="Establish a remote desktop connection"
+$rdesk_win_computername_label.Content="Computer Name:"
+
+$rdesk_win_computername_stack.AddChild($rdesk_win_computername_label)
+$rdesk_win_computername_stack.AddChild($rdesk_win_computername_text)
+
+$rdesk_win_dock.AddChild($rdesk_win_infolabel)
+$rdesk_win_dock.AddChild($rdesk_win_computername_stack)
+$rdesk_win_dock.AddChild($rdesk_win_submit_button)
+
+
+[System.Windows.Controls.DockPanel]::SetDock($rdesk_win_infolabel, [System.Windows.Controls.Dock]::Top)
+[System.Windows.Controls.DockPanel]::SetDock($rdesk_win_computername_stack, [System.Windows.Controls.Dock]::Top)
+[System.Windows.Controls.DockPanel]::SetDock($rdesk_win_submit_button, [System.Windows.Controls.Dock]::Bottom)
+#endregion RemoteDesktopSession
+
 
 #region Feedback
 $fbwin = [System.Windows.Window]::new()
@@ -255,7 +477,7 @@ $fbwin_stack.AddChild($fbwin_TEST)
 $pwwin = [System.Windows.Window]::new()
 $pwwin.Title="Passwordinator 7000"
 $pwwin.Width = 320
-$pwwin.Height = 320
+$pwwin.Height = 96
 $pwwin.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
 
 $pwwin_stack = CreateDockPanel
@@ -267,11 +489,11 @@ $pwwin_infolabel.Content="Create a new random password"
 
 
 $pwin_message_text = CreateTextBox
-$pwin_message_text.VerticalAlignment = [System.Windows.VerticalAlignment]::Top
+$pwin_message_text.Margin = "4"
 
 $pwwin_generate_button = CreateButton
+$pwwin_generate_button.Margin="4"
 $pwwin_generate_button.Content = "Generate"
-$pwwin_generate_button.VerticalAlignment = [System.Windows.VerticalAlignment]::Top
 $pwwin_generate_button.Add_Click({
     $pw = [System.Web.Security.Membership]::GeneratePassword(12, 2)
     $pw = $pw.replace('£', '$')
@@ -283,6 +505,7 @@ $pwwin_stack.AddChild($pwwin_infolabel)
 $pwwin_stack.AddChild($pwwin_generate_button)
 $pwwin_stack.AddChild($pwin_message_text)
 
+[System.Windows.Controls.DockPanel]::SetDock($pwwin_infolabel, [System.Windows.Controls.Dock]::Top)
 [System.Windows.Controls.DockPanel]::SetDock($pwwin_infolabel, [System.Windows.Controls.Dock]::Top)
 #endregion PasswordGen
 
@@ -446,6 +669,65 @@ $main_accountbar_stack = CreateStackPanel
 $main_accountbar_group.AddChild($main_accountbar_stack)
 
 #region PasswordBar
+function GenerateDefaultPassword
+{
+## default password month maker
+$current_date = Get-Date
+[string] $current_year = $current_date.Year
+$current_month = $current_date.Month
+$current_day = $current_date.Day
+$current_day_of_year = $current_date.DayOfYear
+$default_password_word = "Pathword"
+if ($current_day_of_year -gt 330 -or $current_day_of_year -lt 35)
+{
+    $default_password_word = "Winter"
+}
+#elseif ($current_day_of_year -lt 80)
+#{
+#    $default_password_word = "Sprinter"
+#}
+elseif ($current_day_of_year -lt 125)
+{
+    $default_password_word = "Spring"
+}
+#elseif ($current_day_of_year -lt 170)
+#{
+#    $default_password_word = "Sprummer"
+#}
+elseif ($current_day_of_year -lt 215)
+{
+    $default_password_word = "Summer"
+}
+#elseif ($current_day_of_year -lt 260)
+#{
+#    $default_password_word = "Sautumn"
+#}
+elseif ($current_day_of_year -lt 305)
+{
+    $default_password_word = "Autumn"
+}
+#else
+#{
+#    $default_password_word = "Wautumn"
+#}
+$rand = (Get-Random)
+$rand1 = (Get-Random)
+$rand2 = (Get-Random)
+
+$rchar = 'a'
+if ($rand1 %2 -eq 0)
+{
+    $rchar = $Global:alphabet[$rand2%26]
+}
+else
+{
+    $rchar = $Global:alphabet_caps[$rand2%26]
+}
+$Global:default_password=[string]::format("{0}{1}{2}{3}{4}", $rand.ToString()[0],$default_password_word, $current_year[2], $current_year[3],$rchar)
+}
+GenerateDefaultPassword
+
+
 ## Password Bar ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- Password Bar
 $main_passwordbar = CreateTextBox
 $main_passwordbar.AcceptsReturn=0
@@ -459,7 +741,6 @@ $main_passwordbar.Margin = "2 2 2 2"
 $main_passwordbar_label.Margin = "2 2 2 2" 
 $main_passwordbar_label.Content="Default Password: "
 $main_passwordbar_label_current.Margin = "2 2 2 2" 
-$Global:default_password="Sprinter23"
 $main_passwordbar.Text = $Global:default_password
 
 
@@ -468,8 +749,24 @@ $main_passwordbar_stack.Orientation="Horizontal"
 $main_passwordbar_stack.HorizontalAlignment="Stretch"
 $main_passwordbar_stack.AddChild($main_passwordbar_label)
 $main_passwordbar_stack.AddChild($main_passwordbar)
-$main_passwordbar_stack.AddChild($main_passwordbar_label_current)
 $main_accountbar_stack.AddChild($main_passwordbar_stack)
+
+# regenerate default password button
+$main_passwordbar_regenerate_button = CreateButton
+$main_passwordbar_stack.AddChild($main_passwordbar_regenerate_button)
+$main_passwordbar_regenerate_button.HorizontalAlignment="Right"
+$main_passwordbar_regenerate_button.Content = "New"
+$main_passwordbar_regenerate_button.Tooltip = "Generate a new password"
+$main_passwordbar_regenerate_button.Padding = "2 2 2 2"
+$main_passwordbar_regenerate_button.Margin = "2 2 2 2"
+$main_passwordbar_regenerate_button.Add_Click({
+    GenerateDefaultPassword
+    $main_passwordbar.Text=$Global:default_password
+    $main_passwordbar_label_current.Content=[string]::format("Current: {0}", $Global:default_password)
+})
+
+
+$main_passwordbar_stack.AddChild($main_passwordbar_label_current)
 
 ## craigs password button
 $main_passwordbar_genericreset_button = CreateButton
@@ -488,7 +785,7 @@ You will be prompted to change this on your next login.
 If you have any further issues, please get in touch on webchat on the Get IT Help pages on the Intranet or your issue is urgent and you require an urgent response, please contact us via 01609 532020 option 3, option 2. You may experience a delay as our phone lines are very busy at the moment, please bear with us and we will connect as soon as we can.
 
 Many thanks,
-T&C Service Desk"
+T&C Service Desk
 "@
     if ($clipboard_text.Contains("%DEFAULT_PASSWORD%"))
     {
@@ -646,13 +943,25 @@ $Global:control_colours.Add("ScrollViewer",     @(@("#eeeeee", "#000000"), @("#f
 $Global:control_colours.Add("Label",            @(@("#eeeeee", "#000000"), @("#aaffaa", "#000000")));
 $Global:control_colours.Add("Button",           @(@("#c0e0e0", "#000000"), @("#c0ffc0", "#000000")));
 
+$Global:searchable_tags = @("table_tag")
+$Global:tag_colours = @{}                       # Default Colours          # Searched Colours
+$Global:tag_colours.Add("table_tag",            @(@("#ffe0a0", "#000000"), @("#c0ffc0", "#000000")));
+
 
 $main_searchbar.Add_TextChanged({
     foreach($c in $Global:all_controls)
     {
 
         [string]$control_type = $c.GetType().Name
-        if ($Global:control_colours.ContainsKey($control_type))
+        [string]$control_tag = $c.Tag
+        $searchable_tag = $Global:searchable_tags.Contains($control_tag)
+
+        if ($Global:tag_colours.ContainsKey($control_tag))
+        {
+            $c.Background = $Global:tag_colours[$control_tag][0][0]
+            $c.Foreground = $Global:tag_colours[$control_tag][0][1]
+        }
+        elseif ($Global:control_colours.ContainsKey($control_type))
         {
             $c.Background = $Global:control_colours[$control_type][0][0]
             $c.Foreground = $Global:control_colours[$control_type][0][1]
@@ -661,7 +970,8 @@ $main_searchbar.Add_TextChanged({
         {
             $c.Background = "#eeeeee"   
             $c.Foreground = "#000000"   
-        }  
+        } 
+         
         
         $match = $this.Text.ToLower()
         if ($match.Length -lt 1)
@@ -670,9 +980,12 @@ $main_searchbar.Add_TextChanged({
         }
 
 
-        if ($c.HasContent)
+
+        if ($c.HasContent -or $searchable_tag)
         {
-            $content = $c.Content    # Labels use content for text
+            if($c.HasContent)
+            {
+                            $content = $c.Content    # Labels use content for text
             $tooltip = $c.Tooltip    # Buttons store copyable data in tooltip
             $header = $c.Header      # Tabs use the header field for their title
             $content_type = $content.GetType().Name
@@ -730,7 +1043,12 @@ $main_searchbar.Add_TextChanged({
                 if ($isMatch)
                 {
                     # Mark this control since it matches the query
-                    if ($Global:control_colours.ContainsKey($control_type))
+                    if ($Global:tag_colours.ContainsKey($control_tag))
+                    {
+                        $c.Background = $Global:tag_colours[$control_tag][1][0]
+                        $c.Foreground = $Global:tag_colours[$control_tag][1][1]
+                    }
+                    elseif($Global:control_colours.ContainsKey($control_type))
                     {
                         $c.Background = $Global:control_colours[$control_type][1][0]
                         $c.Foreground = $Global:control_colours[$control_type][1][1]
@@ -759,6 +1077,60 @@ $main_searchbar.Add_TextChanged({
                     }
                 } 
             }
+            }
+            elseif ($searchable_tag)
+            {
+            
+                [bool]$isMatch = 0
+
+                $c_text = $c.Text
+                if ($c_text)
+                {
+                    if ($c_text.ToLower().Contains($match))
+                    {
+                        $isMatch = 1
+                    }
+                }
+                
+
+                if ($isMatch)
+                {
+                    # Mark this control since it matches the query
+                    if ($Global:tag_colours.ContainsKey($control_tag))
+                    {
+                        $c.Background = $Global:tag_colours[$control_tag][1][0]
+                        $c.Foreground = $Global:tag_colours[$control_tag][1][1]
+                    }
+                    elseif($Global:control_colours.ContainsKey($control_type))
+                    {
+                        $c.Background = $Global:control_colours[$control_type][1][0]
+                        $c.Foreground = $Global:control_colours[$control_type][1][1]
+                    }
+                    else
+                    {
+                        $c.Background = "#ccccff"
+                        $c.Foreground = "#800000"
+                    }  
+
+
+                    # Work upwards and mark any tabs to guide us down
+                    $parent = $c.Parent
+                    while ($parent -ne $null)
+                    {
+                        [string]$type = $parent.GetType().Name
+                        if ($type.Contains("TabItem"))
+                        {
+                            # Colour tabs for navigation
+                            $parent.Background = $Global:control_colours["TabItem"][1][0]
+                            $parent.Foreground = $Global:control_colours["TabItem"][1][1]
+                        }
+                        # Move up a level
+                        $parent = $parent.Parent
+                    }
+                } 
+            }
+
+
         }
     }
 }) # end of searchbar text event
@@ -846,7 +1218,96 @@ foreach ($info_key in $Global:information.Keys)
                 # image
                 $maincontent_isImage = $maincontent_object["Image"]
                 $maincontent_hasPath = $maincontent_object["Path"]
-                if($maincontent_isImage)
+
+                # table
+                $maincontent_isTable = $maincontent_object["Table"]
+                $maincontent_tableHeaders = $maincontent_object["TopRowHeader"]
+
+                if($maincontent_isTable)
+                {
+                    $maincontent_columns = $maincontent_object["Columns"]
+                    $table_stack = CreateStackPanel
+                    $table_header = CreateTextBox
+                    $table_header.Text = $maincontent_content
+                    $table_header.FontSize = 14;
+                    $table_header.IsReadOnly = 1
+                    $table_header.BorderThickness = 0
+                    $table_header.Padding = "0 0 0 0"
+                    $table_header.Margin = "8 4 8 0"
+                    $table_stack.AddChild($table_header)
+
+                    # measure the size of the table
+                    $row_count = $maincontent_columns.Count
+                    $column_count = 0
+                    foreach ($table_column in $maincontent_columns)
+                    {
+                        $column_length = $table_column.Count
+                        if ($column_length -gt $column_count)
+                        {
+                            $column_count = $column_length
+                        }
+                    }
+                    
+                    # create the table / grid
+                    $table_grid = [System.Windows.Controls.Grid]::new();
+                    $table_grid.ShowGridLines = 0
+                    $table_grid.Margin = "4"
+                    #$Global:all_controls.Add($table_grid);
+                    for ($r = 0; $r -lt $row_count; $r++)
+                    {
+                        $rd = [System.Windows.Controls.RowDefinition]::new()
+                        $table_grid.RowDefinitions.Add($rd)
+                    }
+                    for ($c = 0; $c -lt $column_count; $c++)
+                    {                        
+                        $cd = [System.Windows.Controls.ColumnDefinition]::new()
+                        $table_grid.ColumnDefinitions.Add($cd)
+                    }
+
+                    for($y = 0; $y -lt $row_count; $y++)
+                    {
+                        $table_column = $maincontent_columns[$y]
+                        $column_length = $table_column.Count
+                        for ($x = 0; $x -lt $column_length; $x++)
+                        {
+
+                            $cell_text = CreateTextBox
+                            $cell_text.Text = $table_column[$x]
+                            $cell_text.TextWrapping = [System.Windows.TextWrapping]::Wrap
+                            $cell_text.IsReadOnly = 1
+                            $cell_text.BorderThickness = 0
+                            $cell_text.Padding = "0"
+                            $cell_text.Margin = "0"
+                            $cell_text.Tag = "table_tag"
+                            if ($y -eq 0)
+                            {
+                                if ($maincontent_tableHeaders)
+                                {
+                                    $cell_text.FontWeight = [System.Windows.FontWeights]::Bold
+                                }
+                            }
+
+                            $cell_border = CreateBorder
+                            $cell_border.BorderBrush = "Black"
+                            $cell_border.BorderThickness = 1
+                            $cell_border.Margin = "0"
+                            $cell_border.AddChild($cell_text)
+                            $a = $cell_text.HasContent
+
+
+                            [System.Windows.Controls.Grid]::SetRow($cell_border,$y)
+                            [System.Windows.Controls.Grid]::SetColumn($cell_border,$x)
+                            $table_grid.AddChild($cell_border)
+
+                        }
+                    }
+
+                    $table_stack.AddChild($table_grid)
+
+
+                    $2_scrollviewer_contentpanel.AddChild($table_stack)
+                }
+                elseif($maincontent_isImage)
                 {
                     if($maincontent_hasPath)
                     {
@@ -959,10 +1420,20 @@ $main_header_border.AddChild($main_header)
 ### TOP MENU ###
 $top_menu = CreateMenu
 $menu_actions = CreateMenuItem("Actions")
+$menu_spacer = CreateMenuItem("")
 $menu_action_refresh = CreateMenuItem("Refresh")
+$menu_action_refresh.ToolTip = "Reload Copymaster5000"
 $menu_action_remotemessage = CreateMenuItem("Remote Message")
-$menu_action_feedback = CreateMenuItem("Send Feedback")
+$menu_action_remotemessage.ToolTip = "Send a popup message to a remote machine"
+$menu_action_remote_notify = CreateMenuItem("Remote Notification")
+$menu_action_remote_notify.ToolTip = "Send a windows notification remote machine"
+$menu_action_remotedesktop = CreateMenuItem("Remote Desktop")
+$menu_action_remotedesktop.ToolTip = "Connect to a machine via Remote Desktop"
 $menu_action_password = CreateMenuItem("Generate Password")
+$menu_action_password.ToolTip = "Generate a random password"
+$menu_action_feedback = CreateMenuItem("Send Feedback")
+$menu_action_deskside_powershell = CreateMenuItem("Launch Deskside Powershell Script")
+$menu_action_deskside_powershell.ToolTip = "Launch the deskside powershell script - DANGER - be careful, dont apply without knowing what it does"
 $top_menu.AddChild($menu_actions)
 $menu_action_refresh.Add_Click({
     $window.Close()
@@ -971,18 +1442,32 @@ $menu_action_refresh.Add_Click({
 $menu_action_remotemessage.Add_Click({
     $rwin.ShowDialog()
 })
+$menu_action_remotedesktop.Add_Click({
+    $rdesk_win.ShowDialog()
+})
 $menu_action_feedback.Add_Click({
     $fbwin.ShowDialog()
 })
 $menu_action_password.Add_Click({
     $pwwin.ShowDialog()
 })
+$menu_action_remote_notify.Add_Click({
+    $rwin_notify.ShowDialog()
+})
+$menu_action_deskside_powershell.Add_Click({
+    $path = "C:\Temp\Remote-Powershell-Session.ps1"
+    Copy-Item -path "N:\FCS-DATA\Deskside\Powershell Scripts\Remote-Powershell-Session.ps1" -Destination C:\temp\
+    Start-Process powershell $path
+})
 
 
 $menu_actions.AddChild($menu_action_refresh)
 $menu_actions.AddChild($menu_action_remotemessage)
-$menu_actions.AddChild($menu_action_feedback)
+$menu_actions.AddChild($menu_action_remote_notify)
+$menu_actions.AddChild($menu_action_remotedesktop)
 $menu_actions.AddChild($menu_action_password)
+$menu_actions.AddChild($menu_action_deskside_powershell)
+#$menu_actions.AddChild($menu_action_feedback)
 
 # Dock main window elements
 [System.Windows.Controls.DockPanel]::SetDock($top_menu, [System.Windows.Controls.Dock]::Top)
