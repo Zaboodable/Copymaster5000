@@ -7,13 +7,27 @@ Add-Type -AssemblyName PresentationFramework
 Add-Type -AssemblyName System.Web
 #endregion include
 
-$Global:current_user = [System.Environment]::UserName
 $Global:alphabet = @('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')
 $Global:alphabet_caps = @('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z')
 
 # local user data
-$user = $env:USERNAME
-echo "Current user: $user"
+$Global:current_user = [System.Environment]::UserName
+$Global:user_credentials = $null
+
+#user config
+$user_config_path = "$PWD\config\$Global:current_user.json"
+if(Test-Path $user_config_path)
+{
+    #load user config
+    echo "Loading $Global:current_user data"
+} 
+else
+{
+    New-Item $user_config_path
+    echo "{}" >> $user_config_path
+}
+$Global:user_config=$null
+
 
 ### Load Data ###
 [System.Collections.Hashtable] $Global:data = [System.Collections.Hashtable]::new()
@@ -59,7 +73,11 @@ function Show-Notification {
 
 function notify([string]$ComputerName, [string] $Title, [string] $Message)
 {
-    $cred = Get-Credential -UserName $user -Message "Please validate your credentials"
+    $cred = $Global:user_credentials
+    if ($cred -eq $null)
+    {
+        $cred = Get-Credential -UserName $user -Message "Please validate your credentials"
+    }
     Invoke-Command -ComputerName $ComputerName -Credential $cred  -ArgumentList $Title,$Message -ScriptBlock {
         param($t=$Title, $m=$Message)
         function Show-Notification {
@@ -1434,7 +1452,6 @@ $menu_action_password.ToolTip = "Generate a random password"
 $menu_action_feedback = CreateMenuItem("Send Feedback")
 $menu_action_deskside_powershell = CreateMenuItem("Launch Deskside Powershell Script")
 $menu_action_deskside_powershell.ToolTip = "Launch the deskside powershell script - DANGER - be careful, dont apply without knowing what it does"
-$top_menu.AddChild($menu_actions)
 $menu_action_refresh.Add_Click({
     $window.Close()
     .\copymaster.ps1
@@ -1468,6 +1485,15 @@ $menu_actions.AddChild($menu_action_remotedesktop)
 $menu_actions.AddChild($menu_action_password)
 $menu_actions.AddChild($menu_action_deskside_powershell)
 #$menu_actions.AddChild($menu_action_feedback)
+
+
+$menu_login = CreateMenuItem("Log In")
+$menu_login.Add_Click{
+    $Global:user_credentials = Get-Credential $Global:current_user -Message "Please log in"
+}
+
+$top_menu.AddChild($menu_actions)
+$top_menu.AddChild($menu_login)
 
 # Dock main window elements
 [System.Windows.Controls.DockPanel]::SetDock($top_menu, [System.Windows.Controls.Dock]::Top)
