@@ -37,7 +37,7 @@ $Global:user_config=$null
 
 ### Load Data ###
 [System.Collections.Hashtable] $Global:data = [System.Collections.Hashtable]::new()
-$Global:data_path = "N:\fcs-data\ITSHARED\Copymaster5000\data.json"
+$Global:data_path = "$PWD\data.json"
 
 # Set icon
 $icon_path = "$PWD\icon.ico"
