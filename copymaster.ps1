@@ -1,14 +1,20 @@
 ## TODO - clean up a bit
-
+$Global:version=@(
+1,
+0,
+10
+)
 
 #region include
 Add-Type -AssemblyName PresentationFramework
 [System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions") 
 Add-Type -AssemblyName System.Web
+Add-Type -AssemblyName System.Speech
 #endregion include
 
-$Global:alphabet = @('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')
+$Global:alphabet =      @('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')
 $Global:alphabet_caps = @('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z')
+$Global:nato_alphabet = @('Alfa','Bravo','Charlie','Delta','Echo','Foxtrot','Golf','Hotel','India','Juliett','Kilo','Lima','Mike','November','Oscar','Papa','Quebec','Romeo','Sierra','Tango','Uniform','Victor','Whiskey','Xray','Yankee','Zulu')
 
 # local user data
 $Global:current_user = [System.Environment]::UserName
@@ -40,7 +46,70 @@ $icon_path = "$PWD\icon.ico"
 $Global:all_controls.Capacity = 10240
 
 
+
+
+
+## async test
+[System.Timespan] $Global:last_time_of_day = [System.TimeSpan]::FromDays(9999999)
+$all_queues_time_breakpoints = @(
+[System.TimeSpan]::FromMinutes(570), #  9:30 - leave
+[System.TimeSpan]::FromMinutes(690), # 11:30 - start
+[System.TimeSpan]::FromMinutes(870), # 14:30 - leave
+[System.TimeSpan]::FromMinutes(975), # 16:15 - start
+[System.TimeSpan]::FromMinutes(1050) # 17:30 - leave
+)
+
+$timer = [System.Windows.Threading.DispatcherTimer]::new()
+$timer.Interval = [System.TimeSpan]::FromSeconds(10)
+$timer.Add_Tick({
+    [System.TimeSpan]$current_time = [System.DateTime]::Now.TimeOfDay
+
+    for ($i = 0; $i -lt $all_queues_time_breakpoints.Count; $i++)
+    {
+        [System.Timespan] $breakpoint = $all_queues_time_breakpoints[$i]
+        #if last time is less than breakpoint and current is more
+        if ($Global:last_time_of_day.TotalSeconds -lt $breakpoint.TotalSeconds)
+        {
+            if ($current_time.TotalSeconds -gt $breakpoint.TotalSeconds)
+            {
+                $hour_and_minute = [string]::Format("{0}:{1}", $current_time.Hours, $current_time.Minutes - $current_time.Hours * 60)
+                echo $hour_and_minute
+
+                # we have crossed a breakpoint
+                if ($i % 2 -eq 0)
+                {
+                # if i is even, we are leaving queues
+                    Show-Notification "Leave All Queues" "You may now leave all queues"
+                }
+                else
+                {
+                # if i is odd, we are joining queues
+                    Show-Notification "Join All Queues" "You must now join all queues"
+
+                }
+            }
+        }
+    }        
+    $Global:last_time_of_day = $current_time
+
+})
+$timer.Start()
+
+
+
+
 #region Functions
+function string_to_nato {
+    [cmdletbinding()]
+    Param (
+        [string]
+        $text
+    )
+
+    $chars = $text.ToCharArray()
+}
+
+
 # https://den.dev/blog/powershell-windows-notification/
 function Show-Notification {
     [cmdletbinding()]
@@ -78,6 +147,17 @@ function notify([string]$ComputerName, [string] $Title, [string] $Message)
     {
         $cred = Get-Credential -UserName $user -Message "Please validate your credentials"
     }
+
+    if ($ComputerName.ToLower().Contains("ny"))
+    {
+        $ComputerName = $ComputerName
+    } 
+    else
+    {
+        $ComputerName = [string]::Format("NY{0}", $ComputerName)
+    }
+
+
     Invoke-Command -ComputerName $ComputerName -Credential $cred  -ArgumentList $Title,$Message -ScriptBlock {
         param($t=$Title, $m=$Message)
         function Show-Notification {
@@ -107,6 +187,7 @@ function notify([string]$ComputerName, [string] $Title, [string] $Message)
 
             $Notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("PowerShell")
             $Notifier.Show($Toast);
+
         }
         Show-Notification $t $m
     }
@@ -115,7 +196,7 @@ function notify([string]$ComputerName, [string] $Title, [string] $Message)
 # send a popup message to machine
 Function remote_message([string]$ComputerName, [string] $Message)
 {
-    if ($ComputerName.Contains("NY"))
+    if ($ComputerName.ToLower().Contains("ny"))
     {
         $ComputerName = $ComputerName
     } 
@@ -265,7 +346,53 @@ function CreateImage([string]$path, [bool]$use_border)
 
 
 
+#region GroupPolicy
+function CreatePolicyUpdateWindow()
+{
+    $w = [System.Windows.Window]::new()
+    $w.Width = 320;
+    $w.Height = 128;
+    $w.Title = "Policy Updatinator 8000"
 
+    $dp = [System.Windows.Controls.DockPanel]::new()
+
+    $text_cn = CreateTextBox
+    $label_cn = CreateLabel
+    $label_cn.Content = "Computer Name: "
+    $button_go = CreateButton
+    $button_go.Content = "Update"
+    $button_go.Margin = "4"
+
+    $stack_cn = [System.Windows.Controls.DockPanel]::new()
+    $stack_cn.Margin = "4"
+    $stack_cn.AddChild($label_cn)
+    $stack_cn.AddChild($text_cn)
+
+    $dp.AddChild($stack_cn)
+    $dp.AddChild($button_go)
+    $w.AddChild($dp)
+
+    [System.Windows.Controls.DockPanel]::SetDock($stack_cn, [System.Windows.Controls.Dock]::Top)
+    [System.Windows.Controls.DockPanel]::SetDock($button_go, [System.Windows.Controls.Dock]::Bottom)
+
+    $button_go.Add_Click({
+        $ComputerName = $text_cn.Text
+        if ($ComputerName.ToLower().Contains("ny"))
+        {
+            $ComputerName = $ComputerName
+        } 
+        else
+        {
+            $ComputerName = [string]::Format("NY{0}", $ComputerName)
+        }  
+        Invoke-GPUpdate -Computer $ComputerName -Force        
+        $w.Close()
+    })
+
+    $w.ShowDialog()
+
+}
+#endregion GroupPolicy
 
 
 #region RemoteMessage
@@ -437,6 +564,66 @@ $rdesk_win_dock.AddChild($rdesk_win_submit_button)
 [System.Windows.Controls.DockPanel]::SetDock($rdesk_win_computername_stack, [System.Windows.Controls.Dock]::Top)
 [System.Windows.Controls.DockPanel]::SetDock($rdesk_win_submit_button, [System.Windows.Controls.Dock]::Bottom)
 #endregion RemoteDesktopSession
+
+#region GoogleMaster
+$ggwin = [System.Windows.Window]::new()
+$ggwin.Title = "GoogleMaster 12000"
+#$ggwin.WindowStyle = [System.Windows.WindowStyle]::None
+$ggwin.Width = 320
+$ggwin.Height = 180
+$ggwin.Add_Closing({
+    param
+    (
+      [Parameter(Mandatory)][Object]$sender,
+      [Parameter(Mandatory)][System.ComponentModel.CancelEventArgs]$e
+    )
+    $e.Cancel = 1
+    $ggwin.Hide()
+})
+
+$gg_stack = [System.Windows.Controls.StackPanel]::new()
+$gg_title = CreateLabel
+$gg_title.Content = "GoogleMaster 12000"
+$gg_title.FontSize += 4
+
+$gg_label = [System.Windows.Controls.Label]::new()
+$gg_label.Content = "Input your query and press enter to search"
+
+$gg_textbox = [System.Windows.Controls.TextBox]::new()
+$gg_textbox.Margin = "8 0"
+$gg_textbox.Add_KeyDown({
+    param
+    (
+      [Parameter(Mandatory)][Object]$sender,
+      [Parameter(Mandatory)][Windows.Input.KeyEventArgs]$e
+    )
+    if($e.Key.value__ -eq [System.Windows.Input.Key]::Enter.value__)
+    {
+        $google_query = $gg_textbox.Text
+        $url = "https://www.google.com/search?q="
+        $terms = $google_query.Split(' ')
+        $url_final = $url
+        foreach ($t in $terms)
+        {
+            $url_final = $url_final + $t + '+'
+        }
+        Start $url_final
+        $gg_textbox.Text = ""
+        $ggwin.Hide()
+    }
+})
+
+
+$gg_stack.AddChild($gg_title)
+$gg_stack.AddChild($gg_label)
+$gg_stack.AddChild($gg_textbox)
+$ggwin.AddChild($gg_stack)
+
+$ggwin.Add_IsVisibleChanged({
+    [System.Windows.Input.FocusManager]::SetFocusedElement($ggwin, $gg_textbox)
+})
+
+#endregion GoogleMaster
 
 
 #region Feedback
@@ -629,7 +816,8 @@ function HSLtoHEX($values)
 
 
 #region Interface
-[System.Windows.Window] $window = CreateWindow "CopyMaster 5000"
+$t = [string]::format("CopyMaster 5000 - {0}.{1}.{2}", $Global:version[0], $Global:version[1], $Global:version[2])
+[System.Windows.Window] $window = CreateWindow $t
 $window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
 $window.Width = 896
 $window.Height = 768
@@ -689,59 +877,84 @@ $main_accountbar_group.AddChild($main_accountbar_stack)
 #region PasswordBar
 function GenerateDefaultPassword
 {
-## default password month maker
-$current_date = Get-Date
-[string] $current_year = $current_date.Year
-$current_month = $current_date.Month
-$current_day = $current_date.Day
-$current_day_of_year = $current_date.DayOfYear
-$default_password_word = "Pathword"
-if ($current_day_of_year -gt 330 -or $current_day_of_year -lt 35)
-{
-    $default_password_word = "Winter"
-}
-#elseif ($current_day_of_year -lt 80)
-#{
-#    $default_password_word = "Sprinter"
-#}
-elseif ($current_day_of_year -lt 125)
-{
-    $default_password_word = "Spring"
-}
-#elseif ($current_day_of_year -lt 170)
-#{
-#    $default_password_word = "Sprummer"
-#}
-elseif ($current_day_of_year -lt 215)
-{
-    $default_password_word = "Summer"
-}
-#elseif ($current_day_of_year -lt 260)
-#{
-#    $default_password_word = "Sautumn"
-#}
-elseif ($current_day_of_year -lt 305)
-{
-    $default_password_word = "Autumn"
-}
-#else
-#{
-#    $default_password_word = "Wautumn"
-#}
-$rand = (Get-Random)
-$rand1 = (Get-Random)
-$rand2 = (Get-Random)
+    ## default password month maker
+    $current_date = Get-Date
+    [string] $current_year = $current_date.Year
+    $current_month = $current_date.Month
+    $current_day = $current_date.Day
+    $current_day_of_year = $current_date.DayOfYear
+    $default_password_word = "Pathword"
+    if ($current_day_of_year -gt 330 -or $current_day_of_year -lt 35)
+    {
+        $default_password_word = "Winter"
+    }
+    #elseif ($current_day_of_year -lt 80)
+    #{
+    #    $default_password_word = "Sprinter"
+    #}
+    elseif ($current_day_of_year -lt 125)
+    {
+        $default_password_word = "Spring"
+    }
+    #elseif ($current_day_of_year -lt 170)
+    #{
+    #    $default_password_word = "Sprummer"
+    #}
+    elseif ($current_day_of_year -lt 215)
+    {
+        $default_password_word = "Summer"
+    }
+    #elseif ($current_day_of_year -lt 260)
+    #{
+    #    $default_password_word = "Sautumn"
+    #}
+    elseif ($current_day_of_year -lt 305)
+    {
+        $default_password_word = "Autumn"
+    }
+    #else
+    #{
+    #    $default_password_word = "Wautumn"
+    #}
 
-$rchar = 'a'
-if ($rand1 %2 -eq 0)
-{
-    $rchar = $Global:alphabet[$rand2%26]
-}
-else
-{
-    $rchar = $Global:alphabet_caps[$rand2%26]
-}
-$Global:default_password=[string]::format("{0}{1}{2}{3}{4}", $rand.ToString()[0],$default_password_word, $current_year[2], $current_year[3],$rchar)
+    $words = @("Apple", "Chicken", "Spring", "Table", "Chair", "Phone", "Computer", "Laptop", "Piano", "Clock", "Plate", "Glass", "Window", "Forest", "Grass", "Plant", "Planet", "Peach", "Train",
+    "Wheel", "Frame", "Mirror", "Teapot", "Keyboard", "Mouse", "Handle", "Process", "Toaster", "Paper", "North", "South", "Storm", "Cloud", "Light", "Space", "Rocket", "River", "Flower", "Button",
+    "Money", "Pickle"
+    )
+    $default_password_word = $words | Get-Random
+
+    $passgen_number_prefix_count = 2
+    $passgen_char_suffix_count = 2
+    #$passgen_symbol_suffix_count = 1
+    
+
+    $passgen_prefix=""
+    $passgen_suffix=""
+
+    # Generate random number prefix
+    for ($i = 0; $i -lt $passgen_number_prefix_count; $i++)
+    {
+        $passgen_prefix += ( (Get-Random).ToString() )[0]
+    }
+
+    # Generate random char suffix
+    for ($i = 0; $i -lt $passgen_char_suffix_count; $i++)
+    {
+        if ((Get-Random) % 2 -eq 0)
+        {
+            $passgen_suffix += $Global:alphabet[(Get-Random)%26]
+        }
+        else 
+        {
+            $passgen_suffix += $Global:alphabet_caps[(Get-Random)%26]
+        }
+    }
+
+    # Append ! for symbol
+    $passgen_suffix += '!'
+
+    $Global:default_password=$passgen_prefix + $default_password_word + $passgen_suffix
+    #$Global:default_password=[string]::format("{0}{1}{2}{3}{4}{5}{6}", $rand.ToString()[0],$rand1.ToString()[0],$default_password_word, $current_year[2], $current_year[3],$rchar, $rchar2)
 }
 GenerateDefaultPassword
 
@@ -1227,11 +1440,22 @@ foreach ($info_key in $Global:information.Keys)
             for ($ci = 0; $ci -lt $info_tab_data.Length; $ci++)
             {
                 $maincontent_object = $info_tab_data[$ci]
-                $maincontent_bold = $maincontent_object["Bold"]
-                $maincontent_hasTitle = $maincontent_object["Title"]
+
+                # hidden - do not create control if its hidden
+                $maincontent_hidden = $maincontent_object["Hidden"]
+                if ($maincontent_hidden)
+                {
+                    continue;
+                }
+
                 $maincontent_content = $maincontent_object["Content"]
-                $maincontent_isCopyable = $maincontent_object["Copyable"]
+                $maincontent_hasTitle = $maincontent_object["Title"]
                 $maincontent_isButton = $maincontent_object["Button"]
+
+                # text
+                $maincontent_bold = $maincontent_object["Bold"]
+                $maincontent_bigtext = $maincontent_object["BigText"]
+                $maincontent_isCopyable = $maincontent_object["Copyable"]
 
                 # image
                 $maincontent_isImage = $maincontent_object["Image"]
@@ -1243,7 +1467,7 @@ foreach ($info_key in $Global:information.Keys)
 
                 if($maincontent_isTable)
                 {
-                    $maincontent_columns = $maincontent_object["Columns"]
+                    $maincontent_rows = $maincontent_object["Rows"]
                     $table_stack = CreateStackPanel
                     $table_header = CreateTextBox
                     $table_header.Text = $maincontent_content
@@ -1255,11 +1479,11 @@ foreach ($info_key in $Global:information.Keys)
                     $table_stack.AddChild($table_header)
 
                     # measure the size of the table
-                    $row_count = $maincontent_columns.Count
+                    $row_count = $maincontent_rows.Count
                     $column_count = 0
-                    foreach ($table_column in $maincontent_columns)
+                    foreach ($table_row in $maincontent_rows)
                     {
-                        $column_length = $table_column.Count
+                        $column_length = $table_row.Count
                         if ($column_length -gt $column_count)
                         {
                             $column_count = $column_length
@@ -1284,13 +1508,15 @@ foreach ($info_key in $Global:information.Keys)
 
                     for($y = 0; $y -lt $row_count; $y++)
                     {
-                        $table_column = $maincontent_columns[$y]
-                        $column_length = $table_column.Count
+                        ## TODO
+                        ## rename rows/columns to match data properly
+                        $table_row = $maincontent_rows[$y]
+                        $column_length = $table_row.Count
                         for ($x = 0; $x -lt $column_length; $x++)
                         {
 
                             $cell_text = CreateTextBox
-                            $cell_text.Text = $table_column[$x]
+                            $cell_text.Text = $table_row[$x]
                             $cell_text.TextWrapping = [System.Windows.TextWrapping]::Wrap
                             $cell_text.IsReadOnly = 1
                             $cell_text.BorderThickness = 0
@@ -1400,6 +1626,29 @@ foreach ($info_key in $Global:information.Keys)
                     $maincontent_textbox.BorderThickness = 0
                     $maincontent_textbox.Padding = "0 0 0 0"
                     $maincontent_textbox.Margin = "8 4 8 0"
+                    
+                    $cm = [System.Windows.Controls.ContextMenu]::new()
+                    $cm_copy = [System.Windows.Controls.MenuItem]::new()
+                    $cm_copy.Header = "Copy"
+                    $cm_copy.ToolTip = $maincontent_textbox.Text
+                    $cm_copy.Add_Click({
+                        Set-Clipboard -Value $this.ToolTip
+                    })
+                    $cm.AddChild($cm_copy)
+                    $maincontent_textbox.ContextMenu=$cm
+
+                    $2_scrollviewer_contentpanel.AddChild($maincontent_textbox)
+                }
+                elseif($maincontent_bigtext)
+                {
+                    ### BIG text ###
+                    $maincontent_textbox = CreateTextBox
+                    $maincontent_textbox.Text = $maincontent_content
+                    $maincontent_textbox.IsReadOnly = 1
+                    $maincontent_textbox.BorderThickness = 0
+                    $maincontent_textbox.Padding = "0 0 0 0"
+                    $maincontent_textbox.Margin = "8 4 8 0"
+                    $maincontent_textbox.TextWrapping = [System.Windows.TextWrapping]::Wrap
                     $2_scrollviewer_contentpanel.AddChild($maincontent_textbox)
                 }
                 else
@@ -1452,6 +1701,10 @@ $menu_action_password.ToolTip = "Generate a random password"
 $menu_action_feedback = CreateMenuItem("Send Feedback")
 $menu_action_deskside_powershell = CreateMenuItem("Launch Deskside Powershell Script")
 $menu_action_deskside_powershell.ToolTip = "Launch the deskside powershell script - DANGER - be careful, dont apply without knowing what it does"
+$menu_action_group_policy = CreateMenuItem("gpupdate")
+$menu_action_group_policy.ToolTip = "Remotely update group policy"
+$menu_action_TEST = CreateMenuItem("TEST")
+$menu_action_TEST.ToolTip = "TEST"
 $menu_action_refresh.Add_Click({
     $window.Close()
     .\copymaster.ps1
@@ -1476,6 +1729,15 @@ $menu_action_deskside_powershell.Add_Click({
     Copy-Item -path "N:\FCS-DATA\Deskside\Powershell Scripts\Remote-Powershell-Session.ps1" -Destination C:\temp\
     Start-Process powershell $path
 })
+$menu_action_group_policy.Add_Click({
+    CreatePolicyUpdateWindow
+})
+$menu_action_TEST.Add_Click({
+    $ss = [System.Speech.Synthesis.SpeechSynthesizer]::new()
+    $ss.Speak("Hello there")
+    
+
+})
 
 
 $menu_actions.AddChild($menu_action_refresh)
@@ -1484,6 +1746,7 @@ $menu_actions.AddChild($menu_action_remote_notify)
 $menu_actions.AddChild($menu_action_remotedesktop)
 $menu_actions.AddChild($menu_action_password)
 $menu_actions.AddChild($menu_action_deskside_powershell)
+$menu_actions.AddChild($menu_action_group_policy)
 #$menu_actions.AddChild($menu_action_feedback)
 
 
@@ -1492,8 +1755,14 @@ $menu_login.Add_Click{
     $Global:user_credentials = Get-Credential $Global:current_user -Message "Please log in"
 }
 
+$menu_google = CreateMenuItem("Google")
+$menu_google.Add_Click{
+    $ggwin.ShowDialog()    
+}
+
 $top_menu.AddChild($menu_actions)
 $top_menu.AddChild($menu_login)
+$top_menu.AddChild($menu_google)
 
 # Dock main window elements
 [System.Windows.Controls.DockPanel]::SetDock($top_menu, [System.Windows.Controls.Dock]::Top)
@@ -1549,3 +1818,4 @@ foreach($c in $Global:all_controls)
 # Display the window
 
 $window.ShowDialog()
+# dock test #
