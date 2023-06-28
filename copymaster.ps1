@@ -2,7 +2,7 @@
 $Global:version=@(
 1,
 0,
-10
+11
 )
 
 #region include
@@ -12,8 +12,9 @@ Add-Type -AssemblyName System.Web
 Add-Type -AssemblyName System.Speech
 #endregion include
 
-$Global:alphabet =      @('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z')
-$Global:alphabet_caps = @('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z')
+# Removed i I l L from alphabets
+$Global:alphabet =      @('a','b','c','d','e','f','g','h','j','k','m','n','o','p','q','r','s','t','u','v','w','x','y','z')
+$Global:alphabet_caps = @('A','B','C','D','E','F','G','H','J','K','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z')
 $Global:nato_alphabet = @('Alfa','Bravo','Charlie','Delta','Echo','Foxtrot','Golf','Hotel','India','Juliett','Kilo','Lima','Mike','November','Oscar','Papa','Quebec','Romeo','Sierra','Tango','Uniform','Victor','Whiskey','Xray','Yankee','Zulu')
 
 # local user data
@@ -21,23 +22,23 @@ $Global:current_user = [System.Environment]::UserName
 $Global:user_credentials = $null
 
 #user config
-$user_config_path = "$PWD\config\$Global:current_user.json"
-if(Test-Path $user_config_path)
-{
-    #load user config
-    echo "Loading $Global:current_user data"
-} 
-else
-{
-    New-Item $user_config_path
-    echo "{}" >> $user_config_path
-}
-$Global:user_config=$null
+#$user_config_path = "$PWD\config\$Global:current_user.json"
+#if(Test-Path $user_config_path)
+#{
+#    #load user config
+#    echo "Loading $Global:current_user data"
+#} 
+#else
+#{
+#    New-Item $user_config_path
+#    echo "{}" >> $user_config_path
+#}
+#$Global:user_config=$null
 
 
 ### Load Data ###
 [System.Collections.Hashtable] $Global:data = [System.Collections.Hashtable]::new()
-$Global:data_path = "$PWD\data.json"
+$Global:data_path = "N:\fcs-data\ITSHARED\Copymaster5000\data.json"
 
 # Set icon
 $icon_path = "$PWD\icon.ico"
@@ -54,9 +55,9 @@ $Global:all_controls.Capacity = 10240
 $all_queues_time_breakpoints = @(
 [System.TimeSpan]::FromMinutes(570), #  9:30 - leave
 [System.TimeSpan]::FromMinutes(690), # 11:30 - start
-[System.TimeSpan]::FromMinutes(870), # 14:30 - leave
-[System.TimeSpan]::FromMinutes(975), # 16:15 - start
-[System.TimeSpan]::FromMinutes(1050) # 17:30 - leave
+[System.TimeSpan]::FromMinutes(870) # 14:30 - leave
+#[System.TimeSpan]::FromMinutes(975), # 16:15 - start
+#[System.TimeSpan]::FromMinutes(1050) # 17:30 - leave
 )
 
 $timer = [System.Windows.Threading.DispatcherTimer]::new()
@@ -238,8 +239,10 @@ function append_log([string]$content)
 ### Functions to create generic controls and add to global list
 function CreateWindow([string]$title)
 {
-    $Window = [System.Windows.Window]::new()
+    $Window = [System.Windows.Window]::new()    
+    $window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
     $Window.Title = $title
+
     $Global:all_controls.Add($Window)
     return $Window
 }
@@ -349,10 +352,9 @@ function CreateImage([string]$path, [bool]$use_border)
 #region GroupPolicy
 function CreatePolicyUpdateWindow()
 {
-    $w = [System.Windows.Window]::new()
+    $w = CreateWindow "Policy Updatinator 8000"
     $w.Width = 320;
     $w.Height = 128;
-    $w.Title = "Policy Updatinator 8000"
 
     $dp = [System.Windows.Controls.DockPanel]::new()
 
@@ -396,8 +398,7 @@ function CreatePolicyUpdateWindow()
 
 
 #region RemoteMessage
-$rwin = [System.Windows.Window]::new()
-$rwin.Title="Remote Messagerino"
+$rwin = CreateWindow "Remote Messagerino"
 $rwin.Width = 320
 $rwin.Height = 320
 $rwin.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
@@ -450,8 +451,7 @@ $rwin_stack.AddChild($rwin_submit_button)
 #endregion RemoteMessage
 
 #region remote_notify
-$rwin_notify = [System.Windows.Window]::new()
-$rwin_notify.Title="Notificationator 9000"
+$rwin_notify = CreateWindow "Notificationator 9000"
 $rwin_notify.Width = 320
 $rwin_notify.Height = 320
 $rwin_notify.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
@@ -520,8 +520,7 @@ $rwin_notify_stack.AddChild($rwin_notify_submit_button)
 #endregion remote_notify
 
 #region RemoteDesktopSession
-$rdesk_win = [System.Windows.Window]::new()
-$rdesk_win.Title="RemoteMaster2000"
+$rdesk_win = CreateWindow "RemoteMaster2000"
 $rdesk_win.Width = 320
 $rdesk_win.Height = 120
 $rdesk_win.Icon = "$PWD\icon_rdp.ico"
@@ -566,8 +565,7 @@ $rdesk_win_dock.AddChild($rdesk_win_submit_button)
 #endregion RemoteDesktopSession
 
 #region GoogleMaster
-$ggwin = [System.Windows.Window]::new()
-$ggwin.Title = "GoogleMaster 12000"
+$ggwin = CreateWindow "GoogleMaster 12000"
 #$ggwin.WindowStyle = [System.Windows.WindowStyle]::None
 $ggwin.Width = 320
 $ggwin.Height = 180
@@ -625,10 +623,66 @@ $ggwin.Add_IsVisibleChanged({
 
 #endregion GoogleMaster
 
+#region uptime
+$uptimewin = CreateWindow "Upmaster 25000"
+$uptimewin.Width = 320
+$uptimewin.Height = 180
+
+
+
+
+# Main stack content
+$uptimewin_stack_main = [System.Windows.Controls.StackPanel]::new()
+
+$uptime_title = CreateLabel
+$uptime_title.Content="Upmaster"
+$uptimewin_stack_main.AddChild($uptime_title)
+
+$uptime_button = [System.Windows.Controls.Button]::new()
+$uptime_button.Content="Check Uptime"
+$uptime_button.Add_Click({
+    $c = {
+        $bootuptime = (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime;$CurrentDate = Get-Date;$uptime = $CurrentDate - $bootuptime; [string]::format("Days: {0}{1}Hours: {2}{1}Minutes: {3}", $uptime.Days, [Environment]::NewLine, $uptime.Hours, $uptime.Minutes)
+    }
+    $ret = Invoke-Command -ComputerName $uptime_text.Text -ScriptBlock $c   
+    $uptime_title.Content=$ret 
+})
+
+
+# Computer stack
+$uptimewin_stack_computer = [System.Windows.Controls.DockPanel]::new()
+
+$uptime_label = CreateLabel
+$uptime_label.Content="Computer: "
+$uptime_text = [System.Windows.Controls.TextBox]::new()
+$uptimewin_stack_computer.AddChild($uptime_label)
+$uptimewin_stack_computer.AddChild($uptime_text)
+
+
+
+# Add computer stack
+$uptimewin_stack_main.AddChild($uptimewin_stack_computer)
+# add button
+$uptimewin_stack_main.AddChild($uptime_button)
+
+# Add main stack
+$uptimewin.AddChild($uptimewin_stack_main)
+$uptimewin.Add_Closing({
+    param
+    (
+      [Parameter(Mandatory)][Object]$sender,
+      [Parameter(Mandatory)][System.ComponentModel.CancelEventArgs]$e
+    )
+    $e.Cancel = 1
+    $uptime_title.Content="Upmaster"
+    $uptimewin.Hide()
+})
+
+
+#endregion uptime
 
 #region Feedback
-$fbwin = [System.Windows.Window]::new()
-$fbwin.Title="Feedback"
+$fbwin = CreateWindow "Feedback"
 $fbwin.Width = 320
 $fbwin.Height = 320
 $fbwin.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
@@ -679,8 +733,7 @@ $fbwin_stack.AddChild($fbwin_TEST)
 #endregion Feedback
 
 #region PasswordGen
-$pwwin = [System.Windows.Window]::new()
-$pwwin.Title="Passwordinator 7000"
+$pwwin = CreateWindow "Passwordinator 7000"
 $pwwin.Width = 320
 $pwwin.Height = 96
 $pwwin.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
@@ -818,7 +871,6 @@ function HSLtoHEX($values)
 #region Interface
 $t = [string]::format("CopyMaster 5000 - {0}.{1}.{2}", $Global:version[0], $Global:version[1], $Global:version[2])
 [System.Windows.Window] $window = CreateWindow $t
-$window.WindowStartupLocation = [System.Windows.WindowStartupLocation]::CenterScreen
 $window.Width = 896
 $window.Height = 768
 $window.Icon = $icon_path
@@ -1010,10 +1062,13 @@ $main_passwordbar_genericreset_button.Add_Click({
 [string] $clipboard_text = @"
 We have reset your password for the requested system.
 
+Please type the new password manually and do not copy and paste as this can cause issues.
+
 Your new password is: %DEFAULT_PASSWORD%
+
 You will be prompted to change this on your next login.
 
-If you have any further issues, please get in touch on webchat on the Get IT Help pages on the Intranet or your issue is urgent and you require an urgent response, please contact us via 01609 532020 option 3, option 2. You may experience a delay as our phone lines are very busy at the moment, please bear with us and we will connect as soon as we can.
+If you have any further issues, please get in touch on webchat on the Get IT Help pages on the Intranet or your issue is urgent and you require an urgent response, please contact us via 01609 532020 option 2, option 2. You may experience a delay as our phone lines are very busy at the moment, please bear with us and we will connect as soon as we can.
 
 Many thanks,
 T&C Service Desk
@@ -1701,8 +1756,10 @@ $menu_action_password.ToolTip = "Generate a random password"
 $menu_action_feedback = CreateMenuItem("Send Feedback")
 $menu_action_deskside_powershell = CreateMenuItem("Launch Deskside Powershell Script")
 $menu_action_deskside_powershell.ToolTip = "Launch the deskside powershell script - DANGER - be careful, dont apply without knowing what it does"
-$menu_action_group_policy = CreateMenuItem("gpupdate")
+$menu_action_group_policy = CreateMenuItem("GP Update")
 $menu_action_group_policy.ToolTip = "Remotely update group policy"
+$menu_action_software_refresh = CreateMenuItem("Refresh Software Center")
+$menu_action_software_refresh.ToolTip = "Remotely refresh software center"
 $menu_action_TEST = CreateMenuItem("TEST")
 $menu_action_TEST.ToolTip = "TEST"
 $menu_action_refresh.Add_Click({
@@ -1732,11 +1789,55 @@ $menu_action_deskside_powershell.Add_Click({
 $menu_action_group_policy.Add_Click({
     CreatePolicyUpdateWindow
 })
+$menu_action_software_refresh.Add_Click({
+    #$w = CreateWindow "Software Refreshinatore 982"
+    #$w.Width = 320;
+    #$w.Height = 128;
+    #
+    #$dp = [System.Windows.Controls.DockPanel]::new()
+    #
+    #$text_cn = CreateTextBox
+    #$label_cn = CreateLabel
+    #$label_cn.Content = "Computer Name: "
+    #$button_go = CreateButton
+    #$button_go.Content = "Update"
+    #$button_go.Margin = "4"
+    #
+    #$stack_cn = [System.Windows.Controls.DockPanel]::new()
+    #$stack_cn.Margin = "4"
+    #$stack_cn.AddChild($label_cn)
+    #$stack_cn.AddChild($text_cn)
+    #
+    #$dp.AddChild($stack_cn)
+    #$dp.AddChild($button_go)
+    #$w.AddChild($dp)
+    #
+    #[System.Windows.Controls.DockPanel]::SetDock($stack_cn, [System.Windows.Controls.Dock]::Top)
+    #[System.Windows.Controls.DockPanel]::SetDock($button_go, [System.Windows.Controls.Dock]::Bottom)
+    #
+    #$button_go.Add_Click({
+    #    $ComputerName = $text_cn.Text
+    #    if ($ComputerName.ToLower().Contains("ny"))
+    #    {
+    #        $ComputerName = $ComputerName
+    #    } 
+    #    else
+    #    {
+    #        $ComputerName = [string]::Format("NY{0}", $ComputerName)
+    #    }  
+    #
+    #    
+    #    Invoke-WMIMethod -ComputerName $ComputerName -Namespace root\ccm -Class SMS_CLIENT -Name TriggerSchedule "{00000000-0000-0000-0000-000000000021}" # Machine policy
+    #    Invoke-WMIMethod -ComputerName $ComputerName -Namespace root\ccm -Class SMS_CLIENT -Name TriggerSchedule "{00000000-0000-0000-0000-000000000121}" # Application Deployment    
+    #
+    #    $w.Close()
+    # })
+    #$w.ShowDialog()
+    return;
+})
 $menu_action_TEST.Add_Click({
     $ss = [System.Speech.Synthesis.SpeechSynthesizer]::new()
     $ss.Speak("Hello there")
-    
-
 })
 
 
@@ -1745,8 +1846,9 @@ $menu_actions.AddChild($menu_action_remotemessage)
 $menu_actions.AddChild($menu_action_remote_notify)
 $menu_actions.AddChild($menu_action_remotedesktop)
 $menu_actions.AddChild($menu_action_password)
-$menu_actions.AddChild($menu_action_deskside_powershell)
 $menu_actions.AddChild($menu_action_group_policy)
+$menu_actions.AddChild($menu_action_software_refresh)
+#$menu_actions.AddChild($menu_action_deskside_powershell)
 #$menu_actions.AddChild($menu_action_feedback)
 
 
@@ -1760,9 +1862,150 @@ $menu_google.Add_Click{
     $ggwin.ShowDialog()    
 }
 
+$menu_ndrive = CreateMenuItem("N Drive Fix (TEST)")
+$menu_ndrive.Add_Click{
+    $ndrive_win = CreateWindow "Drive Magician 1500"
+
+    $ndrive_win.Width = 320
+    $ndrive_win.Height = 180
+
+
+
+
+    # Main stack content
+    $ndrive_win_stack_main = [System.Windows.Controls.StackPanel]::new()
+    $ndrive_win_stack_output = [System.Windows.Controls.StackPanel]::new()
+
+    $ndrive_win_button = [System.Windows.Controls.Button]::new()
+    $ndrive_win_button.Content="Check Uptime"
+    $ndrive_win_button.Add_Click({    
+        [string] $text = ""
+
+        # uptime
+        $command_uptime = {
+            $bootuptime = (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime;$CurrentDate = Get-Date;$uptime = $CurrentDate - $bootuptime; [string]::format("Days: {0}{1}Hours: {2}{1}Minutes: {3}", $uptime.Days, [Environment]::NewLine, $uptime.Hours, $uptime.Minutes)
+        }
+        $ret = Invoke-Command -ComputerName $ndrive_win_text.Text -ScriptBlock $command_uptime  
+        $l1 = CreateLabel
+        $l1.Content = $ret
+        $ndrive_win_stack_output.AddChild($l1);
+
+        # gpupdate
+        $command_gpupdate = {
+            gpupdate /force
+        }
+        $ret = Invoke-Command -ComputerName $ndrive_win_text.Text -ScriptBlock $command_gpupdate          
+        $l2 = CreateLabel
+        $l2.Content = $ret
+        $ndrive_win_stack_output.AddChild($l2);
+
+        # drive add test
+        #$command_drive = {
+        #    # no work
+        #}
+        #
+        #$ret = Invoke-Command -ComputerName $ndrive_win_text.Text -ScriptBlock $command_drive       
+        #$l3 = CreateLabel
+        #$l3.Content = $ret
+        #$ndrive_win_stack_output.AddChild($l3);
+    })
+
+
+    # Computer stack
+    $ndrive_win_stack_computer = [System.Windows.Controls.DockPanel]::new()
+
+    $ndrive_win_label = CreateLabel
+    $ndrive_win_label.Content="Computer: "
+    $ndrive_win_text = [System.Windows.Controls.TextBox]::new()
+    $ndrive_win_stack_computer.AddChild($ndrive_win_label)
+    $ndrive_win_stack_computer.AddChild($ndrive_win_text)
+    $ndrive_win_stack_main.AddChild($ndrive_win_stack_output)
+
+
+
+    # Add computer stack
+    $ndrive_win_stack_main.AddChild($ndrive_win_stack_computer)
+    # add button
+    $ndrive_win_stack_main.AddChild($ndrive_win_button)
+
+    # Add main stack
+    $ndrive_win.AddChild($ndrive_win_stack_main)
+    $ndrive_win.Add_Closing({
+        param
+        (
+          [Parameter(Mandatory)][Object]$sender,
+          [Parameter(Mandatory)][System.ComponentModel.CancelEventArgs]$e
+        )
+        $e.Cancel = 1
+        $ndrive_win.Hide()
+    })
+    
+    $ndrive_win.ShowDialog()
+
+}
+
+
+$menu_uptime = CreateMenuItem("Check Uptime")
+$menu_uptime.Add_Click{
+    $uptimewin.ShowDialog()
+}
+
+$Global:clipboard_stuff=@{}
+$menu_clipboard = CreateMenuItem("Clipboard")
+$menu_clipboard.Add_Click{
+    $clipwin = CreateWindow "Clipboardmaster"
+    $clipwin.Width = 240
+    $clipwin.Height = 240
+    $clipwin_stack = [System.Windows.Controls.DockPanel]::new()
+    $clipwin_stack.LastChildFill=1
+    $clipwin_text = [System.Windows.Controls.TextBox]::new()
+    $clipwin_text.AcceptsReturn=1;
+
+    $id = Get-Random
+    $Global:clipboard_stuff[$id] = ""
+
+    $clipwin_text.ToolTip = $id
+
+    $clipwin_button = [System.Windows.Controls.Button]::new()
+    $clipwin_button.ToolTip = $id
+    $clipwin_button.Content="Copy"
+
+    $clipwin_text.Add_TextChanged({    
+        $Global:clipboard_stuff[$this.tooltip] = $this.Text
+    })
+
+    $clipwin_button.Add_Click({        
+        Set-Clipboard -Value $Global:clipboard_stuff[$this.tooltip]
+    })
+
+    $clipwin.ToolTip = $id
+    $clipwin.Add_Closing({
+        param
+        (
+          [Parameter(Mandatory)][Object]$sender,
+          [Parameter(Mandatory)][System.ComponentModel.CancelEventArgs]$e
+        )
+        $Global:clipboard_stuff[$this.tooltip] = ""
+
+    })
+
+    
+    [System.Windows.Controls.DockPanel]::SetDock($clipwin_button, [System.Windows.Controls.Dock]::Bottom)
+    [System.Windows.Controls.DockPanel]::SetDock($clipwin_text, [System.Windows.Controls.Dock]::Top)
+    $clipwin_stack.AddChild($clipwin_button)
+    $clipwin_stack.AddChild($clipwin_text)
+    $clipwin.AddChild($clipwin_stack)
+    $clipwin.Show()
+}
+
+
 $top_menu.AddChild($menu_actions)
 $top_menu.AddChild($menu_login)
-$top_menu.AddChild($menu_google)
+#$top_menu.AddChild($menu_google)
+$top_menu.AddChild($menu_uptime)
+$top_menu.AddChild($menu_clipboard)
+#
+#$top_menu.AddChild($menu_ndrive)
 
 # Dock main window elements
 [System.Windows.Controls.DockPanel]::SetDock($top_menu, [System.Windows.Controls.Dock]::Top)
